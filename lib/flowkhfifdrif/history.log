@@ -1,0 +1,28 @@
+cat: docs/help.txt: No such file or directory
+Usage: flowkhfifdrif.sh [options]
+Options disponibles :
+  -h, --help       Afficher cette aide
+  -f               Exécuter une commande dans un processus enfant
+  -t               Exécuter une commande dans un thread POSIX
+  -s               Exécuter une commande dans un sous-shell
+  -l               Définir le dossier de logs
+  -r               Réinitialiser la configuration du projet
+  --ai             Utiliser l'IA pour interpréter une phrase en commande shellUsage: flowkhfifdrif.sh [options]
+Options disponibles :
+  -h, --help       Afficher cette aide
+  -f               Exécuter une commande dans un processus enfant
+  -t               Exécuter une commande dans un thread POSIX
+  -s               Exécuter une commande dans un sous-shell
+  -l               Définir le dossier de logs
+  -r               Réinitialiser la configuration du projet
+  --ai             Utiliser l'IA pour interpréter une phrase en commande shell2025-05-12-12-21-31 : PC : ERRER  : Option inconnue : -k
+Erreur (103): Option inconnue : -k
+Usage: flowkhfifdrif.sh [options]
+Options disponibles :
+  -h, --help       Afficher cette aide
+  -f               Exécuter une commande dans un processus enfant
+  -t               Exécuter une commande dans un thread POSIX
+  -s               Exécuter une commande dans un sous-shell
+  -l               Définir le dossier de logs
+  -r               Réinitialiser la configuration du projet
+  --ai             Utiliser l'IA pour interpréter une phrase en commande shell
