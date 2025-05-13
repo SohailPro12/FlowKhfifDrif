@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
-# lib/parser.sh — translate natural commands into shell commands
+# lib/parser.sh — translate natural → commands or function calls
 
 parse_natural() {
   local INPUT="$*"
 
-  # 1) init <dir>
-  if [[ "$INPUT" =~ ^init[[:space:]]+([a-zA-Z0-9._-]+)$ ]]; then
-    echo "git init ${BASH_REMATCH[1]}"
+  # 1) init via GitHub module
+  if [[ "$INPUT" =~ ^init[[:space:]]+([A-Za-z0-9._-]+)([[:space:]]+(true|false))?([[:space:]]+([^[:space:]]+))?$ ]]; then
+    echo "init_remote_repo ${BASH_REMATCH[1]} ${BASH_REMATCH[3]:-false} ${BASH_REMATCH[5]:-.}"
     return 0
   fi
 
   # 2) clone <url> [dest]
   if [[ "$INPUT" =~ ^clone[[:space:]]+([^[:space:]]+)([[:space:]]+([^[:space:]]+))?$ ]]; then
     local URL="${BASH_REMATCH[1]}"
-    local DEST="${BASH_REMATCH[3]}"
-    if [[ -n "$DEST" ]]; then
-      echo "git clone $URL $DEST"
+    local D="${BASH_REMATCH[3]}"
+    if [[ -n "$D" ]]; then
+      echo "git clone $URL $D"
     else
       echo "git clone $URL"
     fi
     return 0
   fi
 
-  # 3) push into <branch> with commit "<msg>"
-  if [[ "$INPUT" =~ ^push[[:space:]]+into[[:space:]]+([a-zA-Z0-9._-]+)[[:space:]]+with[[:space:]]+commit[[:space:]]+\"([^\"]+)\"$ ]]; then
+  # 3) push into <branch> with commit <msg>  (avec ou sans guillemets)
+  if [[ "$INPUT" =~ ^push[[:space:]]+into[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]+with[[:space:]]+commit[[:space:]]+(.+)$ ]]; then
     local BR="${BASH_REMATCH[1]}"
     local MSG="${BASH_REMATCH[2]}"
     echo "git add . && git commit -m \"$MSG\" && git push origin $BR"
@@ -31,13 +31,13 @@ parse_natural() {
   fi
 
   # 4) create a new branch called <name>
-  if [[ "$INPUT" =~ ^create[[:space:]]+a[[:space:]]+new[[:space:]]+branch[[:space:]]+called[[:space:]]+([a-zA-Z0-9._-]+)$ ]]; then
+  if [[ "$INPUT" =~ ^create[[:space:]]+a[[:space:]]+new[[:space:]]+branch[[:space:]]+called[[:space:]]+([A-Za-z0-9._-]+)$ ]]; then
     echo "git checkout -b ${BASH_REMATCH[1]}"
     return 0
   fi
 
   # 5) switch to branch <name>
-  if [[ "$INPUT" =~ ^switch[[:space:]]+to[[:space:]]+branch[[:space:]]+([a-zA-Z0-9._-]+)$ ]]; then
+  if [[ "$INPUT" =~ ^switch[[:space:]]+to[[:space:]]+branch[[:space:]]+([A-Za-z0-9._-]+)$ ]]; then
     echo "git checkout ${BASH_REMATCH[1]}"
     return 0
   fi
@@ -54,33 +54,69 @@ parse_natural() {
     return 0
   fi
 
-  # 8) pull from origin
-  if [[ "$INPUT" =~ ^pull[[:space:]]+from[[:space:]]+origin$ ]]; then
-    echo "git pull origin"
+  # 8) pull from origin [branch <name>]
+  if [[ "$INPUT" =~ ^pull[[:space:]]+from[[:space:]]+origin([[:space:]]+branch[[:space:]]+([A-Za-z0-9._-]+))?$ ]]; then
+    local BR="${BASH_REMATCH[2]:-main}"
+    echo "git pull origin $BR"
     return 0
   fi
 
+
   # 9) push into <branch> with tests
-  if [[ "$INPUT" =~ ^push[[:space:]]+into[[:space:]]+([a-zA-Z0-9._-]+)[[:space:]]+with[[:space:]]+tests$ ]]; then
-    local BR="${BASH_REMATCH[1]}"
-    echo "git add . && git commit -m 'auto tests' && git push origin $BR && cd Test && npm test"
+  if [[ "$INPUT" =~ ^push[[:space:]]+into[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]+with[[:space:]]+tests$ ]]; then
+    echo "git add . && git commit -m 'auto tests' && git push origin ${BASH_REMATCH[1]} && cd Test && npm test"
     return 0
   fi
 
   # 10) install library <name>
-  if [[ "$INPUT" =~ ^i[[:space:]]+want[[:space:]]+the[[:space:]]+([a-zA-Z0-9._-]+)[[:space:]]+library$ ]]; then
+  if [[ "$INPUT" =~ ^i[[:space:]]+want[[:space:]]+the[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]+library$ ]]; then
     echo "npm install ${BASH_REMATCH[1]}"
     return 0
   fi
 
-  # 11) clean logs and tmp files
+   # 11) clean logs and tmp files
   if [[ "$INPUT" =~ ^clean[[:space:]]+logs[[:space:]]+and[[:space:]]+tmp[[:space:]]+files$ ]]; then
-    # LOG_DIR is set by the main script
-    echo "rm -rf /tmp/* && rm -f \"\$LOG_DIR\"/*.log"
+  # 🔧 ➤ À faire par le développeur C(Ilyass) :
+  #     Créer une fonction dans logger.sh (ex: clean_logs_and_tmp)
+  #     Cette fonction devra :
+  #     - Supprimer les fichiers accessibles dans /tmp/
+  #     - Supprimer les logs dans $LOG_DIR
+  #     Ensuite, remplacer cette ligne par : echo "clean_logs_and_tmp"
     return 0
   fi
 
-  # If no pattern matched
-  echo "echo 'Commande non reconnue (parser natif)'" >&2
+  # GitHub commands (fonctions dans github.sh)
+  if [[ "$INPUT" =~ ^create[[:space:]]+remote[[:space:]]+repo[[:space:]]+([A-Za-z0-9._-]+)$ ]]; then
+    echo "create_github_repo ${BASH_REMATCH[1]}"
+    return 0
+  fi
+  if [[ "$INPUT" =~ ^setup[[:space:]]+board[[:space:]]+and[[:space:]]+issues[[:space:]]+([A-Za-z0-9._-]+)$ ]]; then
+    echo "setup_board_and_issues ${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+
+  if [[ "$INPUT" =~ ^create[[:space:]]+issue[[:space:]]+\"([^\"]+)\"[[:space:]]+([A-Za-z0-9._-]+)$ ]]; then
+    # create issue "<titre>" <repo>
+  # 🛠️ ➤ À implémenter par le développeur B(Fatima) :
+  #     Ajouter dans github.sh une fonction :
+  #     create_github_issue "<titre>" <repo>
+  #     Elle doit créer une issue sur GitHub via API REST.
+    echo "create_github_issue \"${BASH_REMATCH[1]}\" ${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  if [[ "$INPUT" =~ ^assign[[:space:]]+user[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]+to[[:space:]]+issue[[:space:]]+#([0-9]+)[[:space:]]+([A-Za-z0-9._-]+)$ ]]; then
+  # assign user <utilisateur> to issue #<num> <repo>
+  # 🛠️ ➤ À implémenter par le développeur B(Fatima) :
+  #     Ajouter dans github.sh une fonction :
+  #     assign_github_issue <num> <user> <repo>
+  #     Elle doit utiliser l'API GitHub pour assigner l'utilisateur.
+    echo "assign_github_issue ${BASH_REMATCH[2]} ${BASH_REMATCH[1]} ${BASH_REMATCH[3]}"
+    return 0
+  fi
+
+  # rien de reconnu
+  echo "echo 'Commande non reconnue.'" >&2
   exit 100
 }
