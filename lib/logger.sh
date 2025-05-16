@@ -56,3 +56,10 @@ clean_logs_and_tmp() {
 
 # Redirection des sorties vers le fichier de log
 exec > >(tee -a "$log_file") 2>&1 || log_message "ERROR" "Impossible de créer le répertoire de logs." 102
+
+
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+    echo "Aide affichée."
+    exit 0
+fi
