@@ -11,13 +11,13 @@ GRAPHQL_API_URL="https://api.github.com/graphql"
 
 init_remote_repo() {
   local repo_name="$1" private="${2:-false}" path="${3:-.}"
-  echo "📁 Création du repo GitHub '$repo_name' (privé:$private)…"
+  echo "Création du repo GitHub '$repo_name' (privé:$private)…"
   status=$(curl -s -o /tmp/gh.json -w "%{http_code}" \
     -u "$GITHUB_USER:$GITHUB_TOKEN" \
     -H "Accept: application/vnd.github+json" \
     -X POST "$API_URL/user/repos" \
     -d "{\"name\":\"$repo_name\",\"private\":$private}")
-  [[ "$status" == "201" ]] && echo "✅ Créé." || echo "⚠️ Déjà existant ou erreur ($status)."
+  [[ "$status" == "201" ]] && echo " Créé." || echo "Déjà existant ou erreur ($status)."
   # config Git user
   git config --global user.name  "$GIT_USER_NAME"
   git config --global user.email "$GIT_USER_EMAIL"
@@ -27,54 +27,146 @@ init_remote_repo() {
   git add .; git commit -m "Initial commit"; git branch -M main
   git remote add origin "https://github.com/$GITHUB_USER/$repo_name.git"
   git push -u origin main
-  echo "✅ Local initialisé et poussé."
+  echo "Local initialisé et poussé."
 }
 
 create_github_repo()         { init_remote_repo "$@"; }
 create_board() {
-  local repo="$1"
-  echo "🔧 Création board pour $repo…"
-  user_id=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
-    -H "Content-Type: application/json" -d '{"query":"query{viewer{id}}"}' \
-    | jq -r '.data.viewer.id')
-  project_id=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
-    -H "Content-Type: application/json" \
-    -d "{\"query\":\"mutation{createProjectV2(input:{ownerId:\\\"$user_id\\\",title:\\\"Board $repo\\\"}){projectV2{id}}}\"}" \
-    | jq -r '.data.createProjectV2.projectV2.id')
-  for col in "To Do" "In Progress" "Done"; do
-    curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL/projects/columns?project_id=$project_id" \
-      -H "Content-Type: application/json" \
-      -d "{\"name\":\"$col\"}" >/dev/null
-  done
-  echo "✅ Board créé."
+    local repo_name="$1"
+    echo "Création du tableau de bord pour '$repo_name'..."
+
+    user_id_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
+        -H "Content-Type: application/json" \
+        -d '{"query":"query { viewer { id } }"}')
+
+    user_id=$(echo "$user_id_response" | jq -r '.data.viewer.id')
+
+    if [ "$user_id" == "null" ] || [ -z "$user_id" ]; then
+        echo "Erreur: Impossible d'obtenir l'ID utilisateur. Réponse: $user_id_response"
+        return 1
+    fi
+
+    project_mutation=$(cat <<EOF
+mutation {
+  createProjectV2(input: {ownerId: "$user_id", title: "Tableau de bord $repo_name"}) {
+    projectV2 {
+      id
+      url
+    }
+  }
 }
-create_issues() {
-  local repo="$1"
-  declare -A issues=(
-    ["Config Init"]="Configurer l'environnement."
-    ["Doc"]="Rédiger la doc."
-    ["Tests"]="Écrire les tests."
-  )
-  for title in "${!issues[@]}"; do
-    resp=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
-      -H "Accept:application/vnd.github+json" \
-      -X POST "$API_URL/repos/$GITHUB_USER/$repo/issues" \
-      -d "{\"title\":\"$title\",\"body\":\"${issues[$title]}\"}")
-    echo "✅ Issue: $(echo "$resp" | jq -r '.html_url')"
-  done
+EOF
+)
+
+    project_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"query\": \"$(echo "$project_mutation" | tr -d '\n' | sed 's/"/\\"/g')\"}")
+
+    project_id=$(echo "$project_response" | jq -r '.data.createProjectV2.projectV2.id')
+    project_url=$(echo "$project_response" | jq -r '.data.createProjectV2.projectV2.url')
+
+    if [ "$project_id" == "null" ] || [ -z "$project_id" ]; then
+        echo "Erreur de création du tableau. Réponse: $project_response"
+        return 1
+    fi
+
+    echo "Project V2 créé: $project_url"
+
+    # Ajouter un champ "État"
+    create_field_mutation=$(cat <<EOF
+mutation {
+  createProjectV2Field(input: {
+    projectId: "$project_id",
+    name: "État",
+    dataType: SINGLE_SELECT,
+    singleSelectOptions: [
+      {name: "À faire", color: BLUE, description: "Tâches à démarrer"},
+      {name: "En cours", color: ORANGE, description: "Tâches en cours de réalisation"},
+      {name: "Terminé", color: GREEN, description: "Tâches complétées et validées"}
+    ]
+  }) {
+    projectV2Field {
+      ... on ProjectV2SingleSelectField {
+        id
+        options {
+          id
+          name
+        }
+      }
+    }
+  }
 }
-setup_board_and_issues() { create_board "$1"; create_issues "$1"; }
-create_github_issue()    { curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
-    -H "Accept:application/vnd.github+json" \
-    -X POST "$API_URL/repos/$GITHUB_USER/$2/issues" \
-    -d "{\"title\":\"$1\"}" \
-  | jq -r '.html_url' \
-  | xargs -I{} echo "✅ Issue créée: {}"
+EOF
+)
+
+    field_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"query\": \"$(echo "$create_field_mutation" | tr -d '\n' | sed 's/"/\\"/g')\"}")
+
+    if echo "$field_response" | jq -e '.errors' > /dev/null; then
+        echo "Erreur création du champ 'État'. Réponse: $field_response"
+        return 1
+    fi
+
+    echo "Champ 'État' ajouté au projet."
 }
-assign_github_issue() { local num="$1"; local user="$2"; local repo="${3:-$1}"
-  curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
-    -X POST "$API_URL/repos/$GITHUB_USER/$repo/issues/$num/assignees" \
-    -H "Accept:application/vnd.github+json" \
-    -d "{\"assignees\":[\"$user\"]}" \
-  && echo "✅ $user assigné à #$num"
+
+
+assign_github_issue() {
+    local issue_number="$1"
+    local assignee="$2"
+    local repo_name="$3"
+
+    echo "Attribution de l’utilisateur '$assignee' à l’issue #$issue_number dans '$repo_name'..."
+
+    # Vérifier si le repo existe
+    repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
+      -u "$GITHUB_USER:$GITHUB_TOKEN" \
+      "$API_URL/repos/$GITHUB_USER/$repo_name")
+
+    if [ "$repo_exists" != "200" ]; then
+        echo " Le dépôt '$repo_name' n'existe pas ou n'est pas accessible."
+        return 1
+    fi
+
+    # Attribuer l’utilisateur à l’issue
+    response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
+      -X PATCH "$API_URL/repos/$GITHUB_USER/$repo_name/issues/$issue_number" \
+      -H "Accept: application/vnd.github+json" \
+      -d "{\"assignees\": [\"$assignee\"]}")
+
+    if echo "$response" | jq -e '.assignees' > /dev/null; then
+        echo "Utilisateur '$assignee' assigné à l’issue #$issue_number."
+    else
+        echo "Échec de l’assignation. Réponse : $response"
+        return 1
+    fi
+}
+create_github_issue() {
+    local repo_name="$2"
+    local title="$1"
+    local body="${3:-"Issue créée automatiquement."}"
+    echo "Vérification de l'existence du dépôt '$repo_name'..."
+
+    repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
+      -u "$GITHUB_USER:$GITHUB_TOKEN" \
+      "$API_URL/repos/$GITHUB_USER/$repo_name")
+
+    if [ "$repo_exists" != "200" ]; then
+        echo "Le dépôt '$repo_name' n'existe pas ou vous n'y avez pas accès."
+        return 1
+    fi
+    echo " Création issue \"$title\" dans '$repo_name'..."
+
+    response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
+      -X POST "$API_URL/repos/$GITHUB_USER/$repo_name/issues" \
+      -H "Accept: application/vnd.github+json" \
+      -d "{\"title\":\"$title\",\"body\":\"$body\"}")
+
+    issue_url=$(echo "$response" | jq -r '.html_url')
+    if [ "$issue_url" != "null" ]; then
+        echo "Issue créée: $issue_url"
+    else
+        echo "Erreur lors de la création de l'issue '$title'. Réponse: $response"
+    fi
 }
