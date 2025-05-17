@@ -1,10 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# lib/logger.sh — Fonctions de journalisation
+
 # Variables
-log_dir="/var/log/FlowKhfifDrif/"
-log_file="$log_dir/history.log"
-set -euo pipefail
+# Utilisation du répertoire personnel de l'utilisateur pour les logs
+HOME_DIR="${HOME:-/home/$(whoami)}"
+LOG_DIR="$HOME_DIR/.flowkhfifdrif/logs"
+LOG_FILE="$LOG_DIR/history.log"
+
 # Création du répertoire de logs si nécessaire
-mkdir -p "$log_dir" || log_message "ERROR" "Impossible de créer le répertoire de logs." 102 
+mkdir -p "$LOG_DIR" 2>/dev/null || { echo "Impossible de créer le répertoire de logs."; exit 102; }
+
 # Fonction de journalisation
 log_message() {
     local level="$1"
@@ -16,50 +21,37 @@ log_message() {
     user=$(whoami)
 
     if [[ "$level" == "ERROR" && -n "$code" ]]; then
-        echo "$timestamp : $user : ERROR  : $message (code $code)" | tee -a "$log_file"
+        echo "$timestamp : $user : ERROR  : $message (code $code)" >> "$LOG_FILE"
+        echo "$timestamp : $user : ERROR  : $message (code $code)" >&2
     else
-        echo "$timestamp : $user : $level  : $message" | tee -a "$log_file"
-    fi
-}
-# Fonction d'affichage de l'aide
-function show_help() {
-    cd ..
-    if [[ -f "$log_dir/docs/help.txt" ]]; then
-        log_message "INFOS" "Affichage de l'aide utilisateur depuis docs/help.txt"
-        cat $log_dir/docs/help.txt    
-    else
-        log_message "ERRER" "Fichier d'aide introuvable." 102
+        echo "$timestamp : $user : $level  : $message" >> "$LOG_FILE"
+        echo "$timestamp : $user : $level  : $message"
     fi
 }
 
+# Fonction de nettoyage des logs et fichiers temporaires
 clean_logs_and_tmp() {
     echo "Nettoyage des fichiers temporaires et des logs..."
 
     # Suppression des fichiers temporaires appartenant à l'utilisateur courant dans /tmp/
     if [[ -d /tmp ]]; then
-        find /tmp -type f -user "$(whoami)" -exec rm -f {} \;
+        find /tmp -type f -user "$(whoami)" -exec rm -f {} \; 2>/dev/null || true
         log_message "INFO" "Fichiers temporaires supprimés."
     else
         log_message "ERROR" "Le répertoire /tmp/ n'existe pas." 102
     fi
 
     # Suppression des fichiers de log dans $LOG_DIR
-    if [[ -n "${log_dir:-}" && -d "$log_dir" ]]; then
-        log_message "INFO" "Fichiers de log supprimés."
-        rm $log_file
-        touch $log_file
+    if [[ -d "$LOG_DIR" ]]; then
+        log_message "INFO" "Réinitialisation du fichier de log."
+        cat /dev/null > "$LOG_FILE"
     else
-        log_message "ERROR" "Le répertoire de logs spécifié n'existe pas ou LOG_DIR n'est pas défini." 102
+        log_message "ERROR" "Le répertoire de logs spécifié n'existe pas." 102
     fi
 }
 
-
-# Redirection des sorties vers le fichier de log
-exec > >(tee -a "$log_file") 2>&1 || log_message "ERROR" "Impossible de créer le répertoire de logs." 102
-
-
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
-    echo "Aide affichée."
-    exit 0
-fi
+# Exporter les fonctions
+export -f log_message
+export -f clean_logs_and_tmp
+export LOG_DIR
+export LOG_FILE

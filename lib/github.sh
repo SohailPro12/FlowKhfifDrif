@@ -1,39 +1,76 @@
 #!/usr/bin/env bash
 # lib/github.sh — fonctions GitHub + init local
 
+# Vérification des variables d'environnement requises
 : "${GITHUB_USER:?Variable GITHUB_USER non définie}"
 : "${GITHUB_TOKEN:?Variable GITHUB_TOKEN non définie}"
 : "${GIT_USER_NAME:=$GITHUB_USER}"
-: "${GIT_USER_EMAIL:=?Variable GIT_USER_EMAIL non définie}"
+: "${GIT_USER_EMAIL:?Variable GIT_USER_EMAIL non définie}"
 
+# Définition des URLs de l'API GitHub
 API_URL="https://api.github.com"
 GRAPHQL_API_URL="https://api.github.com/graphql"
 
+# Importer le logger
+# Utilisation du répertoire personnel de l'utilisateur pour les logs
+if [[ -z "$LOG_DIR" ]]; then
+  HOME_DIR="${HOME:-/home/$(whoami)}"
+  LOG_DIR="$HOME_DIR/.flowkhfifdrif/logs"
+fi
+
+# Charger le logger s'il n'est pas déjà chargé
+if ! type log_message &>/dev/null; then
+  source "$LOG_DIR/../lib/logger.sh"
+fi
+
+# Fonction d'initialisation d'un dépôt distant et local
 init_remote_repo() {
   local repo_name="$1" private="${2:-false}" path="${3:-.}"
-  echo "Création du repo GitHub '$repo_name' (privé:$private)…"
+  log_message "INFO" "Création du repo GitHub '$repo_name' (privé:$private)…"
+  
   status=$(curl -s -o /tmp/gh.json -w "%{http_code}" \
     -u "$GITHUB_USER:$GITHUB_TOKEN" \
     -H "Accept: application/vnd.github+json" \
     -X POST "$API_URL/user/repos" \
     -d "{\"name\":\"$repo_name\",\"private\":$private}")
-  [[ "$status" == "201" ]] && echo " Créé." || echo "Déjà existant ou erreur ($status)."
-  # config Git user
-  git config --global user.name  "$GIT_USER_NAME"
+  
+  if [[ "$status" == "201" ]]; then
+    log_message "INFO" "Dépôt GitHub créé avec succès."
+  else
+    log_message "INFO" "Dépôt déjà existant ou erreur ($status)."
+  fi
+  
+  # Configuration Git user
+  git config --global user.name "$GIT_USER_NAME"
   git config --global user.email "$GIT_USER_EMAIL"
-  # init local
-  mkdir -p "$path"; cd "$path" || return 1
-  git init; echo "# $repo_name" > README.md; echo "node_modules/" > .gitignore
-  git add .; git commit -m "Initial commit"; git branch -M main
+  
+  # Initialisation locale
+  mkdir -p "$path" || { log_message "ERROR" "Impossible de créer le répertoire $path" 102; return 1; }
+  cd "$path" || { log_message "ERROR" "Impossible d'accéder au répertoire $path" 102; return 1; }
+  
+  git init
+  echo "# $repo_name" > README.md
+  echo "node_modules/" > .gitignore
+  git add .
+  git commit -m "Initial commit"
+  git branch -M main
   git remote add origin "https://github.com/$GITHUB_USER/$repo_name.git"
   git push -u origin main
-  echo "Local initialisé et poussé."
+  
+  log_message "INFO" "Dépôt local initialisé et poussé vers GitHub."
+  return 0
 }
 
-create_github_repo()         { init_remote_repo "$@"; }
+# Alias pour init_remote_repo
+create_github_repo() { 
+  init_remote_repo "$@"
+  return $?
+}
+
+# Fonction de création d'un tableau de bord pour un dépôt
 create_board() {
-    local repo_name="$1"
-    echo "Création du tableau de bord pour '$repo_name'..."
+    local repo_name="$2"
+    log_message "INFO" "Création du tableau de bord pour '$repo_name'..."
 
     user_id_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
         -H "Content-Type: application/json" \
@@ -42,7 +79,7 @@ create_board() {
     user_id=$(echo "$user_id_response" | jq -r '.data.viewer.id')
 
     if [ "$user_id" == "null" ] || [ -z "$user_id" ]; then
-        echo "Erreur: Impossible d'obtenir l'ID utilisateur. Réponse: $user_id_response"
+        log_message "ERROR" "Impossible d'obtenir l'ID utilisateur. Réponse: $user_id_response" 103
         return 1
     fi
 
@@ -66,11 +103,11 @@ EOF
     project_url=$(echo "$project_response" | jq -r '.data.createProjectV2.projectV2.url')
 
     if [ "$project_id" == "null" ] || [ -z "$project_id" ]; then
-        echo "Erreur de création du tableau. Réponse: $project_response"
+        log_message "ERROR" "Erreur de création du tableau. Réponse: $project_response" 103
         return 1
     fi
 
-    echo "Project V2 créé: $project_url"
+    log_message "INFO" "Project V2 créé: $project_url"
 
     # Ajouter un champ "État"
     create_field_mutation=$(cat <<EOF
@@ -104,20 +141,21 @@ EOF
         -d "{\"query\": \"$(echo "$create_field_mutation" | tr -d '\n' | sed 's/"/\\"/g')\"}")
 
     if echo "$field_response" | jq -e '.errors' > /dev/null; then
-        echo "Erreur création du champ 'État'. Réponse: $field_response"
+        log_message "ERROR" "Erreur création du champ 'État'. Réponse: $field_response" 103
         return 1
     fi
 
-    echo "Champ 'État' ajouté au projet."
+    log_message "INFO" "Champ 'État' ajouté au projet."
+    return 0
 }
 
-
+# Fonction pour attribuer un utilisateur à une issue
 assign_github_issue() {
     local issue_number="$1"
     local assignee="$2"
     local repo_name="$3"
 
-    echo "Attribution de l’utilisateur '$assignee' à l’issue #$issue_number dans '$repo_name'..."
+    log_message "INFO" "Attribution de l'utilisateur '$assignee' à l'issue #$issue_number dans '$repo_name'..."
 
     # Vérifier si le repo existe
     repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -125,38 +163,43 @@ assign_github_issue() {
       "$API_URL/repos/$GITHUB_USER/$repo_name")
 
     if [ "$repo_exists" != "200" ]; then
-        echo " Le dépôt '$repo_name' n'existe pas ou n'est pas accessible."
+        log_message "ERROR" "Le dépôt '$repo_name' n'existe pas ou n'est pas accessible." 104
         return 1
     fi
 
-    # Attribuer l’utilisateur à l’issue
+    # Attribuer l'utilisateur à l'issue
     response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
       -X PATCH "$API_URL/repos/$GITHUB_USER/$repo_name/issues/$issue_number" \
       -H "Accept: application/vnd.github+json" \
       -d "{\"assignees\": [\"$assignee\"]}")
 
     if echo "$response" | jq -e '.assignees' > /dev/null; then
-        echo "Utilisateur '$assignee' assigné à l’issue #$issue_number."
+        log_message "INFO" "Utilisateur '$assignee' assigné à l'issue #$issue_number."
+        return 0
     else
-        echo "Échec de l’assignation. Réponse : $response"
+        log_message "ERROR" "Échec de l'assignation. Réponse : $response" 104
         return 1
     fi
 }
+
+# Fonction pour créer une issue GitHub
 create_github_issue() {
-    local repo_name="$2"
     local title="$1"
+    local repo_name="$2"
     local body="${3:-"Issue créée automatiquement."}"
-    echo "Vérification de l'existence du dépôt '$repo_name'..."
+    
+    log_message "INFO" "Vérification de l'existence du dépôt '$repo_name'..."
 
     repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
       -u "$GITHUB_USER:$GITHUB_TOKEN" \
       "$API_URL/repos/$GITHUB_USER/$repo_name")
 
     if [ "$repo_exists" != "200" ]; then
-        echo "Le dépôt '$repo_name' n'existe pas ou vous n'y avez pas accès."
+        log_message "ERROR" "Le dépôt '$repo_name' n'existe pas ou vous n'y avez pas accès." 104
         return 1
     fi
-    echo " Création issue \"$title\" dans '$repo_name'..."
+    
+    log_message "INFO" "Création issue \"$title\" dans '$repo_name'..."
 
     response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
       -X POST "$API_URL/repos/$GITHUB_USER/$repo_name/issues" \
@@ -165,8 +208,19 @@ create_github_issue() {
 
     issue_url=$(echo "$response" | jq -r '.html_url')
     if [ "$issue_url" != "null" ]; then
-        echo "Issue créée: $issue_url"
+        log_message "INFO" "Issue créée: $issue_url"
+        return 0
     else
-        echo "Erreur lors de la création de l'issue '$title'. Réponse: $response"
+        log_message "ERROR" "Erreur lors de la création de l'issue '$title'. Réponse: $response" 104
+        return 1
     fi
 }
+
+
+
+# Exporter les fonctions
+export -f init_remote_repo
+export -f create_github_repo
+export -f create_board
+export -f assign_github_issue
+export -f create_github_issue
