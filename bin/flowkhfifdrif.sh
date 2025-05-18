@@ -41,6 +41,18 @@ if ! source "$LIB_DIR/parser.sh"; then
   exit 1
 fi
 
+# Charger le cleaner
+if ! source "$LIB_DIR/cleaner.sh"; then
+  log_message "ERROR" "Impossible de charger cleaner.sh" 102
+  exit 1
+fi
+
+# Charger github.sh systématiquement (pour éviter les problèmes de fonctions non trouvées)
+if ! source "$LIB_DIR/github.sh" 2>/dev/null; then
+  log_message "WARN" "Impossible de charger github.sh - les commandes GitHub ne seront pas disponibles" 
+  # Ne pas quitter, car certaines commandes peuvent fonctionner sans github.sh
+fi
+
 # Fonction d'affichage de l'aide
 show_help() {
     if [[ -f "$DOCS_DIR/help.txt" ]]; then
@@ -72,26 +84,31 @@ print_commands_examples() {
   echo "📦 Git local :"
   echo "  └── init MyApp                        → Initialise un nouveau repo local"
   echo "  └── clone <URL>                       → Clone un repo distant"
-  echo "  └── push into main with commit msg   → Git add + commit + push sur une branche"
-  echo "  └── push into develop with tests     → Push + lancer tests"
-  echo "  └── show status                      → Affiche l'état du dépôt"
-  echo "  └── pull from origin                 → Récupère les dernières modifs"
-  echo "  └── create a new branch called feat-x"
-  echo "  └── switch to branch feat-x"
+  echo "  └── add                               → Ajoute tous les fichiers modifiés"
+  echo "  └── commit \"message\"                  → Commit avec message"
+  echo "  └── add-commit \"message\"              → Ajoute et commit en une commande"
+  echo "  └── push-main \"message\"               → Add, commit et push sur main"
+  echo "  └── push-develop                      → Push sur develop (sans add/commit)"
+  echo "  └── push-develop-test                 → Push + lancer tests"
+  echo "  └── status                            → Affiche l'état du dépôt"
+  echo "  └── pull-main                         → Récupère les dernières modifs de main"
+  echo "  └── branch-feat-x                     → Crée une nouvelle branche"
+  echo "  └── checkout-feat-x                   → Bascule vers une branche"
+  echo "  └── log                               → Affiche le dernier commit"
 
   echo -e "\n🔧 Dépendances et Nettoyage :"
-  echo "  └── i want the express library        → Installe express avec npm"
-  echo "  └── clean logs and tmp files          → Nettoie les logs et fichiers temporaires"
+  echo "  └── install-express                   → Installe express avec npm"
+  echo "  └── clean                             → Nettoie les logs et fichiers temporaires"
 
   echo -e "\n☁️ GitHub Remote :"
-  echo "  └── create remote repo MyApp         → Crée un repo GitHub et le relie localement"
-  echo "  └── setup board MyApp     → Crée un tableau et des issues de base"
-  echo "  └── create issue \"Fix bug\" MyApp     → Crée une issue personnalisée"
-  echo "  └── assign user john to issue #3 MyApp → Assigne une issue à un utilisateur"
+  echo "  └── remote-MyApp                      → Crée un repo GitHub et le relie localement"
+  echo "  └── board-MyApp                       → Crée un tableau et des issues de base"
+  echo "  └── issue-MyApp \"Fix bug\"             → Crée une issue personnalisée"
+  echo "  └── assign-john-MyApp-3               → Assigne une issue à un utilisateur"
 
   echo -e "\nℹ️ Utilisation :"
   echo "  flowkhfifdrif \"votre commande ici\""
-  echo -e "  ex : flowkhfifdrif push into main with commit \"init project\"\n"
+  echo -e "  ex : flowkhfifdrif push-main \"init project\"\n"
 }
 
 # Lecture des options
@@ -129,10 +146,12 @@ if [[ -n "$INPUT" ]]; then
     exit 100
   fi
 
-  # Charger GitHub si besoin
-  if [[ "$COMMAND" == init_remote_repo* || "$COMMAND" == create_github_* || "$COMMAND" == setup_board_and_issues* ]]; then
+  # Vérifier si la commande est liée à GitHub
+  if [[ "$COMMAND" == *"create_github_"* || "$COMMAND" == *"init_remote_repo"* || 
+        "$COMMAND" == *"create_board"* || "$COMMAND" == *"assign_github_issue"* ]]; then
+    # Recharger github.sh pour s'assurer que les fonctions sont disponibles
     if ! source "$LIB_DIR/github.sh"; then
-      log_message "ERROR" "Impossible de charger github.sh" 104
+      log_message "ERROR" "Impossible de charger github.sh pour les commandes GitHub" 104
       exit 104
     fi
   fi
@@ -141,10 +160,22 @@ if [[ -n "$INPUT" ]]; then
   log_message "DEBUG" "Exécution de la commande: $COMMAND"
   
   case "$MODE" in
-    fork)     bash -c "$COMMAND" & ;;
-    thread)   bash -c "$COMMAND" & wait ;;
-    subshell) ( eval "$COMMAND" ) ;;
-    *)        eval "$COMMAND" ;;
+    fork)     
+      # Pour le mode fork, on doit s'assurer que les fonctions sont exportées
+      bash -c "source \"$LIB_DIR/github.sh\" 2>/dev/null; $COMMAND" & 
+      ;;
+    thread)   
+      # Pour le mode thread, on doit s'assurer que les fonctions sont exportées
+      bash -c "source \"$LIB_DIR/github.sh\" 2>/dev/null; $COMMAND" & wait 
+      ;;
+    subshell) 
+      # Pour le mode subshell, on doit s'assurer que les fonctions sont exportées
+      ( source "$LIB_DIR/github.sh" 2>/dev/null; eval "$COMMAND" ) 
+      ;;
+    *)        
+      # Mode normal, exécution directe
+      eval "$COMMAND" 
+      ;;
   esac
   
   EXIT_STATUS=$?

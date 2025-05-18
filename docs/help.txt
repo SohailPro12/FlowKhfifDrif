@@ -7,3 +7,4 @@ Options disponibles :
   -l               Définir le dossier de logs
   -r               Réinitialiser la configuration du projet
   --ai             Utiliser l'IA pour interpréter une phrase en commande shell
+  

@@ -69,7 +69,7 @@ create_github_repo() {
 
 # Fonction de création d'un tableau de bord pour un dépôt
 create_board() {
-    local repo_name="$2"
+    local repo_name="$1"
     log_message "INFO" "Création du tableau de bord pour '$repo_name'..."
 
     user_id_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
