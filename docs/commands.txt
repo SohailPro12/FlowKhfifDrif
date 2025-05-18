@@ -1,0 +1,51 @@
+📘 COMMANDES DISPONIBLES – EXEMPLES PRATIQUES
+
+📦 GIT LOCAL
+-----------
+init MyApp                        → Initialise un nouveau repo local
+clone <URL>                       → Clone un repo distant
+
+# Commandes add/commit/push
+add                               → Ajoute tous les fichiers modifiés
+commit "message"                  → Commit avec message
+add-commit "message"              → Ajoute et commit en une commande
+push-main "message"               → Add, commit et push sur main
+push-develop                      → Push sur develop (sans add/commit)
+push-develop-test                 → Push + lancer tests
+
+# Branches
+branch-feat-x                     → Crée une nouvelle branche
+checkout-feat-x                   → Bascule vers une branche
+
+# Informations
+status                            → Affiche l'état du dépôt
+log                               → Affiche le dernier commit
+pull-main                         → Récupère les dernières modifs de main
+pull-develop                      → Récupère les dernières modifs de develop
+
+🔧 DÉPENDANCES ET NETTOYAGE
+-------------------------
+install-express                   → Installe express avec npm
+clean                             → Nettoie les logs et fichiers temporaires
+
+☁️ GITHUB REMOTE
+-------------
+remote-MyApp                      → Crée un repo GitHub et le relie localement
+board-MyApp                       → Crée un tableau et des issues de base
+issue-MyApp "Fix bug"             → Crée une issue personnalisée
+assign-john-MyApp-3               → Assigne une issue à un utilisateur
+
+ℹ️ COMPATIBILITÉ (ANCIENNES COMMANDES)
+----------------------------------
+push into main with commit "msg"  → Équivalent à push-main "msg"
+create a new branch called feat-x → Équivalent à branch-feat-x
+switch to branch feat-x           → Équivalent à checkout-feat-x
+show status                       → Équivalent à status
+show latest commit                → Équivalent à log
+pull from origin                  → Équivalent à pull-main
+i want the express library        → Équivalent à install-express
+clean logs and tmp files          → Équivalent à clean
+create remote repo MyApp          → Équivalent à remote-MyApp
+setup board and issues MyApp      → Équivalent à board-MyApp
+create issue "Fix bug" MyApp      → Équivalent à issue-MyApp "Fix bug"
+assign user john to issue #3 MyApp → Équivalent à assign-john-MyApp-3

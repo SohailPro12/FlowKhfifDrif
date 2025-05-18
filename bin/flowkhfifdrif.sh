@@ -79,36 +79,42 @@ show_help() {
 
 # Fonction pour afficher les exemples de commandes
 print_commands_examples() {
-  echo -e "\n📘 Commandes disponibles – Exemples pratiques\n"
+  if [[ -f "$DOCS_DIR/commands.txt" ]]; then
+    log_message "INFO" "Affichage des exemples de commandes depuis docs/commands.txt"
+    cat "$DOCS_DIR/commands.txt"
+  else
+    log_message "ERROR" "Fichier commands.txt introuvable." 102
+    echo -e "\n📘 Commandes disponibles – Exemples pratiques\n"
 
-  echo "📦 Git local :"
-  echo "  └── init MyApp                        → Initialise un nouveau repo local"
-  echo "  └── clone <URL>                       → Clone un repo distant"
-  echo "  └── add                               → Ajoute tous les fichiers modifiés"
-  echo "  └── commit \"message\"                  → Commit avec message"
-  echo "  └── add-commit \"message\"              → Ajoute et commit en une commande"
-  echo "  └── push-main \"message\"               → Add, commit et push sur main"
-  echo "  └── push-develop                      → Push sur develop (sans add/commit)"
-  echo "  └── push-develop-test                 → Push + lancer tests"
-  echo "  └── status                            → Affiche l'état du dépôt"
-  echo "  └── pull-main                         → Récupère les dernières modifs de main"
-  echo "  └── branch-feat-x                     → Crée une nouvelle branche"
-  echo "  └── checkout-feat-x                   → Bascule vers une branche"
-  echo "  └── log                               → Affiche le dernier commit"
+    echo "📦 Git local :"
+    echo "  └── init MyApp                        → Initialise un nouveau repo local"
+    echo "  └── clone <URL>                       → Clone un repo distant"
+    echo "  └── add                               → Ajoute tous les fichiers modifiés"
+    echo "  └── commit \"message\"                  → Commit avec message"
+    echo "  └── add-commit \"message\"              → Ajoute et commit en une commande"
+    echo "  └── push-main \"message\"               → Add, commit et push sur main"
+    echo "  └── push-develop                      → Push sur develop (sans add/commit)"
+    echo "  └── push-develop-test                 → Push + lancer tests"
+    echo "  └── status                            → Affiche l'état du dépôt"
+    echo "  └── pull-main                         → Récupère les dernières modifs de main"
+    echo "  └── branch-feat-x                     → Crée une nouvelle branche"
+    echo "  └── checkout-feat-x                   → Bascule vers une branche"
+    echo "  └── log                               → Affiche le dernier commit"
 
-  echo -e "\n🔧 Dépendances et Nettoyage :"
-  echo "  └── install-express                   → Installe express avec npm"
-  echo "  └── clean                             → Nettoie les logs et fichiers temporaires"
+    echo -e "\n🔧 Dépendances et Nettoyage :"
+    echo "  └── install-express                   → Installe express avec npm"
+    echo "  └── clean                             → Nettoie les logs et fichiers temporaires"
 
-  echo -e "\n☁️ GitHub Remote :"
-  echo "  └── remote-MyApp                      → Crée un repo GitHub et le relie localement"
-  echo "  └── board-MyApp                       → Crée un tableau et des issues de base"
-  echo "  └── issue-MyApp \"Fix bug\"             → Crée une issue personnalisée"
-  echo "  └── assign-john-MyApp-3               → Assigne une issue à un utilisateur"
+    echo -e "\n☁️ GitHub Remote :"
+    echo "  └── remote-MyApp                      → Crée un repo GitHub et le relie localement"
+    echo "  └── board-MyApp                       → Crée un tableau et des issues de base"
+    echo "  └── issue-MyApp \"Fix bug\"             → Crée une issue personnalisée"
+    echo "  └── assign-john-MyApp-3               → Assigne une issue à un utilisateur"
 
-  echo -e "\nℹ️ Utilisation :"
-  echo "  flowkhfifdrif \"votre commande ici\""
-  echo -e "  ex : flowkhfifdrif push-main \"init project\"\n"
+    echo -e "\nℹ️ Utilisation :"
+    echo "  flowkhfifdrif \"votre commande ici\""
+    echo -e "  ex : flowkhfifdrif push-main \"init project\"\n"
+  fi
 }
 
 # Lecture des options

@@ -1,10 +1,43 @@
-Usage: flowkhfifdrif.sh [options]
-Options disponibles :
-  -h, --help       Afficher cette aide
-  -f               Exécuter une commande dans un processus enfant
-  -t               Exécuter une commande dans un thread POSIX
-  -s               Exécuter une commande dans un sous-shell
-  -l               Définir le dossier de logs
-  -r               Réinitialiser la configuration du projet
-  --ai             Utiliser l'IA pour interpréter une phrase en commande shell
-  
+FlowKhfifDrif - Assistant de développement en langage naturel
+
+DESCRIPTION:
+  FlowKhfifDrif est un outil en ligne de commande qui vous permet d'exécuter
+  des commandes Git et GitHub en utilisant un langage naturel simplifié.
+  Il traduit vos instructions en commandes techniques et les exécute pour vous.
+
+UTILISATION:
+  flowkhfifdrif [OPTIONS] "commande en langage naturel"
+
+OPTIONS:
+  -h, --help     Affiche cette aide
+  --commands     Affiche des exemples de commandes
+  -f             Exécute la commande en arrière-plan (fork)
+  -t             Exécute la commande dans un thread
+  -s             Exécute la commande dans un sous-shell
+  -l CHEMIN      Spécifie un répertoire de logs alternatif
+  -r             Réinitialise les paramètres
+  --ai           Active les fonctionnalités d'IA (si disponibles)
+
+EXEMPLES:
+  flowkhfifdrif "init MyApp"
+  flowkhfifdrif "push-main \"Initial commit\""
+  flowkhfifdrif "branch-feature"
+  flowkhfifdrif "clean"
+
+CONFIGURATION GITHUB:
+  Pour utiliser les commandes GitHub, définissez ces variables d'environnement:
+  export GITHUB_USER="votre_nom_utilisateur"
+  export GITHUB_TOKEN="votre_token"
+  export GIT_USER_EMAIL="votre_email"
+
+FICHIERS:
+  ~/.flowkhfifdrif/            Répertoire principal
+  ~/.flowkhfifdrif/lib/        Bibliothèques (logger.sh, parser.sh, etc.)
+  ~/.flowkhfifdrif/logs/       Fichiers de journalisation
+  ~/.flowkhfifdrif/docs/       Documentation
+
+JOURNALISATION:
+  Tous les événements sont enregistrés dans ~/.flowkhfifdrif/logs/history.log
+  Utilisez "flowkhfifdrif clean" pour nettoyer les logs et fichiers temporaires.
+
+Pour plus d'exemples, utilisez l'option --commands
