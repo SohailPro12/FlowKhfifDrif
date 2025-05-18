@@ -16,19 +16,23 @@ OPTIONS:
   -s             Exécute la commande dans un sous-shell
   -l CHEMIN      Spécifie un répertoire de logs alternatif
   -r             Réinitialise les paramètres
-  --ai           Active les fonctionnalités d'IA (si disponibles)
+  --ai           Active les fonctionnalités d'IA avec Gemini (nécessite GEMINI_API_KEY)
 
 EXEMPLES:
   flowkhfifdrif "init MyApp"
   flowkhfifdrif "push-main \"Initial commit\""
   flowkhfifdrif "branch-feature"
   flowkhfifdrif "clean"
+  flowkhfifdrif --ai "clone the repository at https://github.com/user/repo"
 
-CONFIGURATION GITHUB:
+CONFIGURATION:
   Pour utiliser les commandes GitHub, définissez ces variables d'environnement:
   export GITHUB_USER="votre_nom_utilisateur"
   export GITHUB_TOKEN="votre_token"
   export GIT_USER_EMAIL="votre_email"
+
+  Pour utiliser l'option --ai, définissez:
+  export GEMINI_API_KEY="votre_clé_api_gemini"
 
 FICHIERS:
   ~/.flowkhfifdrif/            Répertoire principal

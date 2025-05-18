@@ -10,6 +10,7 @@ LOG_FILE="$LOG_DIR/history.log"
 DOCS_DIR="$INSTALL_DIR/docs"
 LIB_DIR="$INSTALL_DIR/lib"
 MODE="normal"
+USE_AI=false
 
 # Création du répertoire de logs si nécessaire
 mkdir -p "$LOG_DIR" 2>/dev/null || { echo "Impossible de créer le répertoire de logs dans $LOG_DIR. Vérifiez vos permissions."; exit 102; }
@@ -47,10 +48,36 @@ if ! source "$LIB_DIR/cleaner.sh"; then
   exit 1
 fi
 
-# Charger github.sh systématiquement (pour éviter les problèmes de fonctions non trouvées)
+# Charger github.sh de manière non bloquante
 if ! source "$LIB_DIR/github.sh" 2>/dev/null; then
   log_message "WARN" "Impossible de charger github.sh - les commandes GitHub ne seront pas disponibles" 
-  # Ne pas quitter, car certaines commandes peuvent fonctionner sans github.sh
+  # Définir des fonctions factices pour éviter les erreurs
+  create_github_repo() { 
+    echo "Fonction GitHub non disponible. Vérifiez l'installation de github.sh."
+    return 1
+  }
+  create_board() {
+    echo "Fonction GitHub non disponible. Vérifiez l'installation de github.sh."
+    return 1
+  }
+  assign_github_issue() {
+    echo "Fonction GitHub non disponible. Vérifiez l'installation de github.sh."
+    return 1
+  }
+  create_github_issue() {
+    echo "Fonction GitHub non disponible. Vérifiez l'installation de github.sh."
+    return 1
+  }
+fi
+
+# Charger ai.sh si nécessaire (de manière non bloquante)
+if ! source "$LIB_DIR/ai.sh" 2>/dev/null; then
+  log_message "WARN" "Impossible de charger ai.sh - l'option --ai ne sera pas disponible"
+  # Définir une fonction factice pour éviter les erreurs
+  process_ai_command() {
+    echo "Fonction IA non disponible. Vérifiez l'installation de ai.sh."
+    return 1
+  }
 fi
 
 # Fonction d'affichage de l'aide
@@ -73,7 +100,7 @@ show_help() {
         echo "  -s             Exécute la commande dans un sous-shell"
         echo "  -l CHEMIN      Spécifie un répertoire de logs alternatif"
         echo "  -r             Réinitialise les paramètres"
-        echo "  --ai           Active les fonctionnalités d'IA (si disponibles)"
+        echo "  --ai           Active les fonctionnalités d'IA (nécessite GEMINI_API_KEY)"
     fi
 }
 
@@ -141,6 +168,19 @@ if [[ -z "$INPUT" && -z "${RESET:-}" ]]; then
   exit 100
 fi
 
+# Mode IA activé
+if [[ "$USE_AI" == true ]]; then
+  if ! type process_ai_command &>/dev/null; then
+    log_message "ERROR" "L'option --ai nécessite le module ai.sh, qui n'a pas pu être chargé" 103
+    echo "Erreur: L'option --ai n'est pas disponible. Vérifiez que ai.sh est correctement installé." >&2
+    exit 103
+  fi
+  
+  log_message "INFO" "Mode IA activé, traitement de la commande: $INPUT"
+  process_ai_command "$INPUT"
+  exit $?
+fi
+
 # Appel au parser seulement si une commande est fournie
 if [[ -n "$INPUT" ]]; then
   # Capture la sortie du parser dans une variable
@@ -156,8 +196,9 @@ if [[ -n "$INPUT" ]]; then
   if [[ "$COMMAND" == *"create_github_"* || "$COMMAND" == *"init_remote_repo"* || 
         "$COMMAND" == *"create_board"* || "$COMMAND" == *"assign_github_issue"* ]]; then
     # Recharger github.sh pour s'assurer que les fonctions sont disponibles
-    if ! source "$LIB_DIR/github.sh"; then
+    if ! source "$LIB_DIR/github.sh" 2>/dev/null; then
       log_message "ERROR" "Impossible de charger github.sh pour les commandes GitHub" 104
+      echo "Erreur: Les commandes GitHub ne sont pas disponibles. Vérifiez l'installation de github.sh." >&2
       exit 104
     fi
   fi
@@ -168,15 +209,15 @@ if [[ -n "$INPUT" ]]; then
   case "$MODE" in
     fork)     
       # Pour le mode fork, on doit s'assurer que les fonctions sont exportées
-      bash -c "source \"$LIB_DIR/github.sh\" 2>/dev/null; $COMMAND" & 
+      bash -c "source \"$LIB_DIR/github.sh\" 2>/dev/null || true; $COMMAND" & 
       ;;
     thread)   
       # Pour le mode thread, on doit s'assurer que les fonctions sont exportées
-      bash -c "source \"$LIB_DIR/github.sh\" 2>/dev/null; $COMMAND" & wait 
+      bash -c "source \"$LIB_DIR/github.sh\" 2>/dev/null || true; $COMMAND" & wait 
       ;;
     subshell) 
       # Pour le mode subshell, on doit s'assurer que les fonctions sont exportées
-      ( source "$LIB_DIR/github.sh" 2>/dev/null; eval "$COMMAND" ) 
+      ( source "$LIB_DIR/github.sh" 2>/dev/null || true; eval "$COMMAND" ) 
       ;;
     *)        
       # Mode normal, exécution directe

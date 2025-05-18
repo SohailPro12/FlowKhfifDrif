@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 # lib/github.sh — fonctions GitHub + init local
 
-# Vérification des variables d'environnement requises
-: "${GITHUB_USER:?Variable GITHUB_USER non définie}"
-: "${GITHUB_TOKEN:?Variable GITHUB_TOKEN non définie}"
-: "${GIT_USER_NAME:=$GITHUB_USER}"
-: "${GIT_USER_EMAIL:?Variable GIT_USER_EMAIL non définie}"
+# Gestion des variables d'environnement de manière non bloquante
+GITHUB_USER="${GITHUB_USER:-}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+GIT_USER_NAME="${GIT_USER_NAME:-$GITHUB_USER}"
+GIT_USER_EMAIL="${GIT_USER_EMAIL:-}"
+
+# Fonction pour vérifier les variables d'environnement avant d'exécuter des commandes GitHub
+check_github_env() {
+  if [[ -z "$GITHUB_USER" || -z "$GITHUB_TOKEN" || -z "$GIT_USER_EMAIL" ]]; then
+    log_message "ERROR" "Variables d'environnement GitHub manquantes. Définissez GITHUB_USER, GITHUB_TOKEN et GIT_USER_EMAIL." 104
+    return 1
+  fi
+  return 0
+}
 
 # Définition des URLs de l'API GitHub
 API_URL="https://api.github.com"
@@ -26,6 +35,12 @@ fi
 # Fonction d'initialisation d'un dépôt distant et local
 init_remote_repo() {
   local repo_name="$1" private="${2:-false}" path="${3:-.}"
+  
+  # Vérifier les variables d'environnement
+  if ! check_github_env; then
+    return 1
+  fi
+  
   log_message "INFO" "Création du repo GitHub '$repo_name' (privé:$private)…"
   
   status=$(curl -s -o /tmp/gh.json -w "%{http_code}" \
@@ -63,6 +78,11 @@ init_remote_repo() {
 
 # Alias pour init_remote_repo
 create_github_repo() { 
+  # Vérifier les variables d'environnement
+  if ! check_github_env; then
+    return 1
+  fi
+  
   init_remote_repo "$@"
   return $?
 }
@@ -70,6 +90,12 @@ create_github_repo() {
 # Fonction de création d'un tableau de bord pour un dépôt
 create_board() {
     local repo_name="$1"
+    
+    # Vérifier les variables d'environnement
+    if ! check_github_env; then
+      return 1
+    }
+    
     log_message "INFO" "Création du tableau de bord pour '$repo_name'..."
 
     user_id_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
@@ -154,6 +180,11 @@ assign_github_issue() {
     local issue_number="$1"
     local assignee="$2"
     local repo_name="$3"
+    
+    # Vérifier les variables d'environnement
+    if ! check_github_env; then
+      return 1
+    }
 
     log_message "INFO" "Attribution de l'utilisateur '$assignee' à l'issue #$issue_number dans '$repo_name'..."
 
@@ -188,6 +219,11 @@ create_github_issue() {
     local repo_name="$2"
     local body="${3:-"Issue créée automatiquement."}"
     
+    # Vérifier les variables d'environnement
+    if ! check_github_env; then
+      return 1
+    }
+    
     log_message "INFO" "Vérification de l'existence du dépôt '$repo_name'..."
 
     repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -216,9 +252,8 @@ create_github_issue() {
     fi
 }
 
-
-
 # Exporter les fonctions
+export -f check_github_env
 export -f init_remote_repo
 export -f create_github_repo
 export -f create_board
