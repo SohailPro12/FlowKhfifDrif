@@ -3,49 +3,75 @@
 📦 GIT LOCAL
 -----------
 init MyApp                        → Initialise un nouveau repo local
+  Exemple: flowkhfifdrif "init MyProject"
+
 clone <URL>                       → Clone un repo distant
+  Exemple: flowkhfifdrif "clone https://github.com/user/repo"
 
 # Commandes add/commit/push
 add                               → Ajoute tous les fichiers modifiés
-commit "message"                  → Commit avec message
-add-commit "message"              → Ajoute et commit en une commande
-push-main "message"               → Add, commit et push sur main
+  Exemple: flowkhfifdrif "add"
+
+commit <message>                  → Commit avec message
+  Exemple: flowkhfifdrif "commit Correction du bug d'authentification"
+  Exemple: flowkhfifdrif "commit \"Fix login page bug\""
+
+add-commit <message>              → Ajoute et commit en une commande
+  Exemple: flowkhfifdrif "add-commit Ajout de la fonctionnalité de recherche"
+
+push-main <message>               → Add, commit et push sur main
+  Exemple: flowkhfifdrif "push-main Version initiale du projet"
+
 push-develop                      → Push sur develop (sans add/commit)
+  Exemple: flowkhfifdrif "push-develop"
+
 push-develop-test                 → Push + lancer tests
+  Exemple: flowkhfifdrif "push-develop-test"
 
 # Branches
 branch-feat-x                     → Crée une nouvelle branche
+  Exemple: flowkhfifdrif "branch-feature-login"
+
 checkout-feat-x                   → Bascule vers une branche
+  Exemple: flowkhfifdrif "checkout-develop"
 
 # Informations
 status                            → Affiche l'état du dépôt
+  Exemple: flowkhfifdrif "status"
+
 log                               → Affiche le dernier commit
+  Exemple: flowkhfifdrif "log"
+
 pull-main                         → Récupère les dernières modifs de main
-pull-develop                      → Récupère les dernières modifs de develop
+  Exemple: flowkhfifdrif "pull-main"
 
 🔧 DÉPENDANCES ET NETTOYAGE
 -------------------------
 install-express                   → Installe express avec npm
+  Exemple: flowkhfifdrif "install-express"
+
 clean                             → Nettoie les logs et fichiers temporaires
+  Exemple: flowkhfifdrif "clean"
 
 ☁️ GITHUB REMOTE
 -------------
 remote-MyApp                      → Crée un repo GitHub et le relie localement
-board-MyApp                       → Crée un tableau et des issues de base
-issue-MyApp "Fix bug"             → Crée une issue personnalisée
-assign-john-MyApp-3               → Assigne une issue à un utilisateur
+  Exemple: flowkhfifdrif "remote-MyProject"
 
-ℹ️ COMPATIBILITÉ (ANCIENNES COMMANDES)
-----------------------------------
-push into main with commit "msg"  → Équivalent à push-main "msg"
-create a new branch called feat-x → Équivalent à branch-feat-x
-switch to branch feat-x           → Équivalent à checkout-feat-x
-show status                       → Équivalent à status
-show latest commit                → Équivalent à log
-pull from origin                  → Équivalent à pull-main
-i want the express library        → Équivalent à install-express
-clean logs and tmp files          → Équivalent à clean
-create remote repo MyApp          → Équivalent à remote-MyApp
-setup board and issues MyApp      → Équivalent à board-MyApp
-create issue "Fix bug" MyApp      → Équivalent à issue-MyApp "Fix bug"
-assign user john to issue #3 MyApp → Équivalent à assign-john-MyApp-3
+board-MyApp                       → Crée un tableau et des issues de base
+  Exemple: flowkhfifdrif "board-MyProject"
+
+issue-MyApp <titre>               → Crée une issue personnalisée
+  Exemple: flowkhfifdrif "issue-MyProject Ajouter la page de connexion"
+
+assign-john-MyApp-3               → Assigne une issue à un utilisateur
+  Exemple: flowkhfifdrif "assign-john-MyProject-3"
+
+ℹ️ UTILISATION
+----------
+flowkhfifdrif "votre commande ici"
+
+REMARQUES:
+- Les guillemets autour des messages sont optionnels
+- Pour les messages contenant des caractères spéciaux, utilisez des guillemets
+- Toutes les commandes utilisent la syntaxe avec tirets pour plus de cohérence

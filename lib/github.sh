@@ -94,7 +94,7 @@ create_board() {
     # Vérifier les variables d'environnement
     if ! check_github_env; then
       return 1
-    }
+    fi
     
     log_message "INFO" "Création du tableau de bord pour '$repo_name'..."
 
@@ -184,7 +184,7 @@ assign_github_issue() {
     # Vérifier les variables d'environnement
     if ! check_github_env; then
       return 1
-    }
+    fi
 
     log_message "INFO" "Attribution de l'utilisateur '$assignee' à l'issue #$issue_number dans '$repo_name'..."
 
@@ -222,7 +222,7 @@ create_github_issue() {
     # Vérifier les variables d'environnement
     if ! check_github_env; then
       return 1
-    }
+    fi
     
     log_message "INFO" "Vérification de l'existence du dépôt '$repo_name'..."
 
