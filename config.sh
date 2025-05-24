@@ -1,3 +1,4 @@
-export GITHUB_USER="AITOULAHYANFati"
-export GITHUB_TOKEN=""
-export GIT_USER_EMAIL="fatimaaitoulhyane@gmail.com"
+GITHUB_USER=""
+GITHUB_TOKEN=""
+GIT_USER_EMAIL="
+GEMINI_API_KEY=""
