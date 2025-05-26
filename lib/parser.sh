@@ -19,10 +19,17 @@ parse_natural() {
 
   # --- COMMANDES GIT LOCAL ---
 
-  # 1) init <repo> - Initialisation d'un dépôt
-  if [[ "$INPUT" =~ ^init[[:space:]]+([A-Za-z0-9._-]+)([[:space:]]+(true|false))?([[:space:]]+([^[:space:]]+))?$ ]]; then
-    log_message "INFO" "Initialisation du dépôt distant ${BASH_REMATCH[1]}" >&2
-    echo "init_remote_repo ${BASH_REMATCH[1]} ${BASH_REMATCH[3]:-false} ${BASH_REMATCH[5]:-.}"
+  # 1) init <repo> [public|private] [path] - Initialisation d'un dépôt
+  if [[ "$INPUT" =~ ^init[[:space:]]+([A-Za-z0-9._-]+)([[:space:]]+(public|private))?([[:space:]]+([^[:space:]]+))?$ ]]; then
+    local repo_name="${BASH_REMATCH[1]}"
+    local visibility="${BASH_REMATCH[3]:-public}" # Default to public
+    local path="${BASH_REMATCH[5]:-.}"
+    local is_private="false"
+    if [[ "$visibility" == "private" ]]; then
+      is_private="true"
+    fi
+    log_message "INFO" "Initialisation du dépôt $repo_name (Visibilité: $visibility)" >&2
+    echo "init_remote_repo $repo_name $is_private $path"
     return 0
   fi
 

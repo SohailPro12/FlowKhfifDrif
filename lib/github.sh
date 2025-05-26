@@ -56,14 +56,18 @@ init_remote_repo() {
   if ! check_github_env; then
     return 1
   fi
+  log_message "INFO" "Création du repo GitHub 	'$repo_name' (privé:$private)…"
 
-  log_message "INFO" "Création du repo GitHub '$repo_name' (privé:$private)…"
+  # Debug: Afficher la commande curl et le payload
+  local json_payload="{\"name\":\"$repo_name\",\"private\":$private}"
+  log_message "DEBUG" "Payload JSON envoyé à GitHub: $json_payload" >&2
+  log_message "DEBUG" "Commande Curl: curl -s -o /tmp/gh.json -w \"%{http_code}\" -u \"$GITHUB_USER:<TOKEN>\" -H \"Accept: application/vnd.github+json\" -X POST \"$API_URL/user/repos\" -d '$json_payload'" >&2
 
   local status=$(curl -s -o /tmp/gh.json -w "%{http_code}" \
     -u "$GITHUB_USER:$GITHUB_TOKEN" \
     -H "Accept: application/vnd.github+json" \
     -X POST "$API_URL/user/repos" \
-    -d "{\"name\":\"$repo_name\",\"private\":$private}")
+    -d "$json_payload")
 
   if [[ "$status" == "201" ]]; then
     log_message "INFO" "Dépôt GitHub créé avec succès."
@@ -126,18 +130,14 @@ create_github_repo() {
 }
 
 create_board() {
-<<<<<<< HEAD
-  local repo_name="$1"
-=======
     local repo_name="$1"
-    
+
     # Vérifier les variables d'environnement
     if ! check_github_env; then
       return 1
     fi
-    
+
     log_message "INFO" "Création du tableau de bord pour '$repo_name'..."
->>>>>>> e8a048b16f7f8a7150822801cc8ebe24d85e869b
 
   if ! check_github_env; then
     return 1
@@ -222,20 +222,14 @@ EOF
 }
 
 assign_github_issue() {
-<<<<<<< HEAD
-  local issue_number="$1"
-  local assignee="$2"
-  local repo_name="$3"
-=======
     local issue_number="$1"
     local assignee="$2"
     local repo_name="$3"
-    
+
     # Vérifier les variables d'environnement
     if ! check_github_env; then
       return 1
     fi
->>>>>>> e8a048b16f7f8a7150822801cc8ebe24d85e869b
 
   if ! check_github_env; then
     return 1
@@ -267,22 +261,16 @@ assign_github_issue() {
 }
 
 create_github_issue() {
-<<<<<<< HEAD
-  local title="$1"
-  local repo_name="$2"
-  local body="${3:-"Issue créée automatiquement."}"
-=======
     local title="$1"
     local repo_name="$2"
     local body="${3:-"Issue créée automatiquement."}"
-    
+
     # Vérifier les variables d'environnement
     if ! check_github_env; then
       return 1
     fi
-    
+
     log_message "INFO" "Vérification de l'existence du dépôt '$repo_name'..."
->>>>>>> e8a048b16f7f8a7150822801cc8ebe24d85e869b
 
   if ! check_github_env; then
     return 1
