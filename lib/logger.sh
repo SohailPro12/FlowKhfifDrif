@@ -1,14 +1,30 @@
 #!/usr/bin/env bash
-# lib/logger.sh — Fonctions de journalisation
+# lib/logger.sh — Gestion des logs avec persistance du chemin
 
-# Variables
-# Utilisation du répertoire personnel de l'utilisateur pour les logs
+# ====== CONFIGURATION ======
 HOME_DIR="${HOME:-/home/$(whoami)}"
-LOG_DIR="$HOME_DIR/.flowkhfifdrif/logs"
-LOG_FILE="$LOG_DIR/history.log"
+CONFIG_FILE="$HOME_DIR/.flowkhfifdrif/logger_config.sh" # Utiliser un nom de fichier plus spécifique
 
-# Création du répertoire de logs si nécessaire
-mkdir -p "$LOG_DIR" 2>/dev/null || { echo "Impossible de créer le répertoire de logs."; exit 102; }
+# Valeurs par défaut
+DEFAULT_LOG_DIR="$HOME_DIR/.flowkhfifdrif/logs"
+DEFAULT_LOG_FILE="$DEFAULT_LOG_DIR/history.log"
+
+# Initialiser les variables avec les valeurs par défaut
+LOG_DIR="$DEFAULT_LOG_DIR"
+LOG_FILE="$DEFAULT_LOG_FILE"
+
+# Charger la config si elle existe
+if [[ -f "$CONFIG_FILE" ]]; then
+    source "$CONFIG_FILE"
+fi
+
+# Créer le dossier de logs si nécessaire (utilise la valeur chargée ou par défaut)
+mkdir -p "$LOG_DIR" 2>/dev/null || {
+    echo "ERROR: Impossible de créer le dossier de logs $LOG_DIR. Vérifiez les permissions." >&2
+    exit 102
+}
+
+# ====== FONCTIONS ======
 
 # Fonction de journalisation
 log_message() {
@@ -33,7 +49,8 @@ log_message() {
     fi
 }
 
-# Exporter les fonctions
+# Exporter les fonctions et variables nécessaires
 export -f log_message
+export -f set_log_path
 export LOG_DIR
 export LOG_FILE

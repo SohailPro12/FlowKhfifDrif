@@ -13,10 +13,27 @@ else
   log_message "WARN" "Fichier de configuration non trouvé : $CONFIG_FILE"
 fi
 # Vérifie que les variables GitHub sont bien définies ou utilise une valeur par défaut
+# Utilisation du répertoire personnel pour la configuration et les logs
+HOME_DIR="${HOME:-/home/$(whoami)}"
+CONFIG_FILE="$HOME_DIR/.flowkhfifdrif/config.sh"
+LOG_DIR="$HOME_DIR/.flowkhfifdrif/logs"
+
+# Charger les variables d'environnement depuis config.sh si le fichier existe
+if [[ -f "$CONFIG_FILE" ]]; then
+  source "$CONFIG_FILE"
+else
+  log_message "WARN" "Fichier de configuration non trouvé : $CONFIG_FILE"
+fi
+# Vérifie que les variables GitHub sont bien définies ou utilise une valeur par défaut
 GITHUB_USER="${GITHUB_USER:-}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 GIT_USER_NAME="${GIT_USER_NAME:-$GITHUB_USER}"
 GIT_USER_EMAIL="${GIT_USER_EMAIL:-}"
+
+# Charger le logger s'il n'est pas déjà chargé
+if ! type log_message &>/dev/null; then
+  source "$HOME_DIR/.flowkhfifdrif/lib/logger.sh"
+fi
 
 # Charger le logger s'il n'est pas déjà chargé
 if ! type log_message &>/dev/null; then
@@ -53,11 +70,18 @@ init_remote_repo() {
   local private="${2:-false}"
   local path="${3:-.}"
 
+  local repo_name="$1"
+  local private="${2:-false}"
+  local path="${3:-.}"
+
   if ! check_github_env; then
     return 1
   fi
 
+
   log_message "INFO" "Création du repo GitHub '$repo_name' (privé:$private)…"
+
+  local status=$(curl -s -o /tmp/gh.json -w "%{http_code}" \
 
   local status=$(curl -s -o /tmp/gh.json -w "%{http_code}" \
     -u "$GITHUB_USER:$GITHUB_TOKEN" \
@@ -65,9 +89,11 @@ init_remote_repo() {
     -X POST "$API_URL/user/repos" \
     -d "{\"name\":\"$repo_name\",\"private\":$private}")
 
+
   if [[ "$status" == "201" ]]; then
     log_message "INFO" "Dépôt GitHub créé avec succès."
   else
+    log_message "WARN" "Dépôt déjà existant ou erreur ($status)."
     log_message "WARN" "Dépôt déjà existant ou erreur ($status)."
   fi
 
@@ -159,14 +185,23 @@ create_board() {
   user_id_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
     -H "Content-Type: application/json" \
     -d '{"query":"query { viewer { id } }"}')
+  user_id_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
+    -H "Content-Type: application/json" \
+    -d '{"query":"query { viewer { id } }"}')
 
+  user_id=$(echo "$user_id_response" | jq -r '.data.viewer.id')
   user_id=$(echo "$user_id_response" | jq -r '.data.viewer.id')
 
   if [ "$user_id" == "null" ] || [ -z "$user_id" ]; then
     log_message "ERROR" "Impossible d'obtenir l'ID utilisateur. Réponse: $user_id_response" 103
     return 1
   fi
+  if [ "$user_id" == "null" ] || [ -z "$user_id" ]; then
+    log_message "ERROR" "Impossible d'obtenir l'ID utilisateur. Réponse: $user_id_response" 103
+    return 1
+  fi
 
+  project_mutation=$(cat <<EOF
   project_mutation=$(cat <<EOF
 mutation {
   createProjectV2(input: {ownerId: "$user_id", title: "Tableau de bord $repo_name"}) {
@@ -182,7 +217,12 @@ EOF
   project_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
     -H "Content-Type: application/json" \
     -d "{\"query\": \"$(echo "$project_mutation" | tr -d '\n' | sed 's/"/\\"/g')\"}")
+  project_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\": \"$(echo "$project_mutation" | tr -d '\n' | sed 's/"/\\"/g')\"}")
 
+  project_id=$(echo "$project_response" | jq -r '.data.createProjectV2.projectV2.id')
+  project_url=$(echo "$project_response" | jq -r '.data.createProjectV2.projectV2.url')
   project_id=$(echo "$project_response" | jq -r '.data.createProjectV2.projectV2.id')
   project_url=$(echo "$project_response" | jq -r '.data.createProjectV2.projectV2.url')
 
@@ -190,9 +230,15 @@ EOF
     log_message "ERROR" "Erreur de création du tableau. Réponse: $project_response" 103
     return 1
   fi
+  if [ "$project_id" == "null" ] || [ -z "$project_id" ]; then
+    log_message "ERROR" "Erreur de création du tableau. Réponse: $project_response" 103
+    return 1
+  fi
 
   log_message "INFO" "Project V2 créé: $project_url"
+  log_message "INFO" "Project V2 créé: $project_url"
 
+  create_field_mutation=$(cat <<EOF
   create_field_mutation=$(cat <<EOF
 mutation {
   createProjectV2Field(input: {
@@ -222,12 +268,21 @@ EOF
   field_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
     -H "Content-Type: application/json" \
     -d "{\"query\": \"$(echo "$create_field_mutation" | tr -d '\n' | sed 's/"/\\"/g')\"}")
+  field_response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" -X POST "$GRAPHQL_API_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\": \"$(echo "$create_field_mutation" | tr -d '\n' | sed 's/"/\\"/g')\"}")
 
   if echo "$field_response" | jq -e '.errors' > /dev/null; then
     log_message "ERROR" "Erreur création du champ 'État'. Réponse: $field_response" 103
     return 1
   fi
+  if echo "$field_response" | jq -e '.errors' > /dev/null; then
+    log_message "ERROR" "Erreur création du champ 'État'. Réponse: $field_response" 103
+    return 1
+  fi
 
+  log_message "INFO" "Champ 'État' ajouté au projet."
+  return 0
   log_message "INFO" "Champ 'État' ajouté au projet."
   return 0
 }
@@ -242,11 +297,19 @@ assign_github_issue() {
   fi
 
   log_message "INFO" "Attribution de l'utilisateur '$assignee' à l'issue #$issue_number dans '$repo_name'..."
+  log_message "INFO" "Attribution de l'utilisateur '$assignee' à l'issue #$issue_number dans '$repo_name'..."
 
   repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
     -u "$GITHUB_USER:$GITHUB_TOKEN" \
     "$API_URL/repos/$GITHUB_USER/$repo_name")
+  repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
+    -u "$GITHUB_USER:$GITHUB_TOKEN" \
+    "$API_URL/repos/$GITHUB_USER/$repo_name")
 
+  if [ "$repo_exists" != "200" ]; then
+    log_message "ERROR" "Le dépôt '$repo_name' n'existe pas ou n'est pas accessible." 104
+    return 1
+  fi
   if [ "$repo_exists" != "200" ]; then
     log_message "ERROR" "Le dépôt '$repo_name' n'existe pas ou n'est pas accessible." 104
     return 1
@@ -256,7 +319,18 @@ assign_github_issue() {
     -X PATCH "$API_URL/repos/$GITHUB_USER/$repo_name/issues/$issue_number" \
     -H "Accept: application/vnd.github+json" \
     -d "{\"assignees\": [\"$assignee\"]}")
+  response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
+    -X PATCH "$API_URL/repos/$GITHUB_USER/$repo_name/issues/$issue_number" \
+    -H "Accept: application/vnd.github+json" \
+    -d "{\"assignees\": [\"$assignee\"]}")
 
+  if echo "$response" | jq -e '.assignees' > /dev/null; then
+    log_message "INFO" "Utilisateur '$assignee' assigné à l'issue #$issue_number."
+    return 0
+  else
+    log_message "ERROR" "Échec de l'assignation. Réponse : $response" 104
+    return 1
+  fi
   if echo "$response" | jq -e '.assignees' > /dev/null; then
     log_message "INFO" "Utilisateur '$assignee' assigné à l'issue #$issue_number."
     return 0
@@ -280,7 +354,16 @@ create_github_issue() {
   repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
     -u "$GITHUB_USER:$GITHUB_TOKEN" \
     "$API_URL/repos/$GITHUB_USER/$repo_name")
+  repo_exists=$(curl -s -o /dev/null -w "%{http_code}" \
+    -u "$GITHUB_USER:$GITHUB_TOKEN" \
+    "$API_URL/repos/$GITHUB_USER/$repo_name")
 
+  if [ "$repo_exists" != "200" ]; then
+    log_message "ERROR" "Le dépôt '$repo_name' n'existe pas ou vous n'y avez pas accès." 104
+    return 1
+  fi
+
+  log_message "INFO" "Création issue \"$title\" dans '$repo_name'..."
   if [ "$repo_exists" != "200" ]; then
     log_message "ERROR" "Le dépôt '$repo_name' n'existe pas ou vous n'y avez pas accès." 104
     return 1
@@ -292,7 +375,19 @@ create_github_issue() {
     -X POST "$API_URL/repos/$GITHUB_USER/$repo_name/issues" \
     -H "Accept: application/vnd.github+json" \
     -d "{\"title\":\"$title\",\"body\":\"$body\"}")
+  response=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
+    -X POST "$API_URL/repos/$GITHUB_USER/$repo_name/issues" \
+    -H "Accept: application/vnd.github+json" \
+    -d "{\"title\":\"$title\",\"body\":\"$body\"}")
 
+  issue_url=$(echo "$response" | jq -r '.html_url')
+  if [ "$issue_url" != "null" ]; then
+    log_message "INFO" "Issue créée: $issue_url"
+    return 0
+  else
+    log_message "ERROR" "Erreur lors de la création de l'issue '$title'. Réponse: $response" 104
+    return 1
+  fi
   issue_url=$(echo "$response" | jq -r '.html_url')
   if [ "$issue_url" != "null" ]; then
     log_message "INFO" "Issue créée: $issue_url"

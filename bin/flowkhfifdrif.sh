@@ -6,13 +6,16 @@ if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
   export HOME=$(eval echo "~$SUDO_USER")
 fi
 
+# Corriger le $HOME quand on exécute avec sudo
+if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+  export HOME=$(eval echo "~$SUDO_USER")
+fi
+
 # Définition des variables globales
 HOME_DIR="${HOME:-/home/$(whoami)}"
 INSTALL_DIR="$HOME_DIR/.flowkhfifdrif"
-LOG_DIR="$INSTALL_DIR/logs"
-LOG_FILE="$LOG_DIR/history.log"
-DOCS_DIR="$INSTALL_DIR/docs"
 LIB_DIR="$INSTALL_DIR/lib"
+DOCS_DIR="$INSTALL_DIR/docs"
 MODE="normal"
 USE_AI=false
 
@@ -20,6 +23,7 @@ USE_AI=false
 mkdir -p "$LOG_DIR" || { echo "Impossible de créer le répertoire de logs dans $LOG_DIR. Vérifiez vos permissions."; exit 102; }
 mkdir -p "$LIB_DIR" || { echo "Impossible de créer le répertoire lib."; exit 102; }
 
+# Détection du chemin du script même via symlink
 # Détection du chemin du script même via symlink
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
@@ -29,6 +33,7 @@ while [ -h "$SOURCE" ]; do
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
 
+# Mode strict
 # Mode strict
 set -euo pipefail
 
@@ -101,10 +106,31 @@ print_commands_examples() {
     echo "  └── branch-feat-x"
     echo "  └── checkout-feat-x"
     echo "  └── log"
+    echo -e "\n📘 Commandes disponibles – Exemples pratiques"
+    echo -e "\n📦 Git local :"
+    echo "  └── init MyApp"
+    echo "  └── clone <URL>"
+    echo "  └── add"
+    echo "  └── commit \"message\""
+    echo "  └── add-commit \"message\""
+    echo "  └── push-main \"message\""
+    echo "  └── push-develop"
+    echo "  └── push-develop-test"
+    echo "  └── status"
+    echo "  └── pull-main"
+    echo "  └── branch-feat-x"
+    echo "  └── checkout-feat-x"
+    echo "  └── log"
     echo -e "\n🔧 Dépendances et Nettoyage :"
     echo "  └── install-express"
     echo "  └── clean"
+    echo "  └── install-express"
+    echo "  └── clean"
     echo -e "\n☁️ GitHub Remote :"
+    echo "  └── remote-MyApp"
+    echo "  └── board-MyApp"
+    echo "  └── issue-MyApp \"Fix bug\""
+    echo "  └── assign-john-MyApp-3"
     echo "  └── remote-MyApp"
     echo "  └── board-MyApp"
     echo "  └── issue-MyApp \"Fix bug\""
@@ -212,6 +238,7 @@ if [[ -z "$INPUT" && -z "${RESET:-}" ]]; then
 fi
 
 # Mode IA
+# Mode IA
 if [[ "$USE_AI" == true ]]; then
   if ! type process_ai_command &>/dev/null; then
     log_message "ERROR" "L'option --ai nécessite le module ai.sh, qui n'a pas pu être chargé" 103
@@ -224,6 +251,7 @@ if [[ "$USE_AI" == true ]]; then
 fi
 
 # Traitement normal
+# Traitement normal
 if [[ -n "$INPUT" ]]; then
   COMMAND=$(parse_natural "$INPUT")
   PARSER_STATUS=$?
@@ -231,6 +259,7 @@ if [[ -n "$INPUT" ]]; then
     log_message "ERROR" "Commande non reconnue ou mal formatée" 100
     exit 100
   fi
+  if [[ "$COMMAND" == *"create_github_"* || "$COMMAND" == *"init_remote_repo"* || "$COMMAND" == *"create_board"* || "$COMMAND" == *"assign_github_issue"* ]]; then
   if [[ "$COMMAND" == *"create_github_"* || "$COMMAND" == *"init_remote_repo"* || "$COMMAND" == *"create_board"* || "$COMMAND" == *"assign_github_issue"* ]]; then
     if ! source "$LIB_DIR/github.sh" 2>/dev/null; then
       log_message "ERROR" "Impossible de charger github.sh pour les commandes GitHub" 104
