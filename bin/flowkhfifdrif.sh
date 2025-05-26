@@ -6,6 +6,11 @@ if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
   export HOME=$(eval echo "~$SUDO_USER")
 fi
 
+# Corriger le $HOME quand on exécute avec sudo
+if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+  export HOME=$(eval echo "~$SUDO_USER")
+fi
+
 # Définition des variables globales
 HOME_DIR="${HOME:-/home/$(whoami)}"
 INSTALL_DIR="$HOME_DIR/.flowkhfifdrif"
@@ -15,9 +20,10 @@ MODE="normal"
 USE_AI=false
 
 # Création des répertoires nécessaires
-mkdir -p "$INSTALL_DIR/logs" || { echo "Impossible de créer le répertoire de logs dans $INSTALL_DIR/logs. Vérifiez vos permissions."; exit 102; }
+mkdir -p "$LOG_DIR" || { echo "Impossible de créer le répertoire de logs dans $LOG_DIR. Vérifiez vos permissions."; exit 102; }
 mkdir -p "$LIB_DIR" || { echo "Impossible de créer le répertoire lib."; exit 102; }
 
+# Détection du chemin du script même via symlink
 # Détection du chemin du script même via symlink
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
@@ -28,131 +34,13 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
 
 # Mode strict
+# Mode strict
 set -euo pipefail
 
-# Chargement du logger (doit être chargé en premier et avant le parsing des options)
-if ! source "$LIB_DIR/logger.sh"; then
-    echo "ERROR: Impossible de charger logger.sh. Vérifiez que le fichier est correctement installé." >&2
-    exit 102
-fi
-
-# Fonctions d'aide (définies avant le parsing pour être appelables par les options)
-show_help() {
-  if [[ -f "$DOCS_DIR/help.txt" ]]; then
-    log_message "INFO" "Affichage de l'aide utilisateur depuis docs/help.txt"
-    cat "$DOCS_DIR/help.txt"
-  else
-    log_message "ERROR" "Fichier d'aide introuvable." 102
-    echo "FlowKhfifDrif - Assistant de développement en langage naturel"
-    echo "\nUTILISATION:"
-    echo "  flowkhfifdrif [OPTIONS] \"commande en langage naturel\""
-    echo "\nOPTIONS:"
-    echo "  -h, --help     Affiche cette aide"
-    echo "  --commands     Affiche des exemples de commandes"
-    echo "  -f             Exécute la commande en arrière-plan (fork)"
-    echo "  -t             Exécute la commande dans un thread"
-    echo "  -s             Exécute la commande dans un sous-shell"
-    echo "  -l CHEMIN      Spécifie un répertoire de logs alternatif (persistant)"
-    echo "  -r             Réinitialise les paramètres"
-    echo "  --ai           Active les fonctionnalités d'IA"
-  fi
-}
-
-print_commands_examples() {
-  if [[ -f "$DOCS_DIR/commands.txt" ]]; then
-    log_message "INFO" "Affichage des exemples de commandes depuis docs/commands.txt"
-    cat "$DOCS_DIR/commands.txt"
-  else
-    log_message "ERROR" "Fichier commands.txt introuvable." 102
-    echo -e "\n📘 Commandes disponibles – Exemples pratiques"
-    echo -e "\n📦 Git local :"
-    echo "  └── init MyApp"
-    echo "  └── clone <URL>"
-    echo "  └── add"
-    echo "  └── commit \"message\""
-    echo "  └── add-commit \"message\""
-    echo "  └── push-main \"message\""
-    echo "  └── push-develop"
-    echo "  └── push-develop-test"
-    echo "  └── status"
-    echo "  └── pull-main"
-    echo "  └── branch-feat-x"
-    echo "  └── checkout-feat-x"
-    echo "  └── log"
-    echo -e "\n🔧 Dépendances et Nettoyage :"
-    echo "  └── install-express"
-    echo "  └── clean"
-    echo -e "\n☁️ GitHub Remote :"
-    echo "  └── remote-MyApp"
-    echo "  └── board-MyApp"
-    echo "  └── issue-MyApp \"Fix bug\""
-    echo "  └── assign-john-MyApp-3"
-    echo -e "\nℹ️ Utilisation :"
-    echo "  flowkhfifdrif \"votre commande ici\""
-    echo -e "  ex : flowkhfifdrif push-main \"init project\"\n"
-  fi
-}
-
-# Lecture des options
-while [[ $# -gt 0 && "$1" =~ ^- ]]; do
-  case "$1" in
-    -h|--help|-help) # Ajout de -help comme alias
-      show_help
-      exit 0
-      ;;
-    --commands)
-      print_commands_examples # Appel corrigé
-      exit 0
-      ;;
-    -f)
-      MODE="fork"
-      ;;
-    -t)
-      MODE="thread"
-      ;;
-    -s)
-      MODE="subshell"
-      ;;
-    -l)
-      shift
-      if [[ -z "${1:-}" ]]; then # Vérification robuste de l'argument
-        log_message "ERROR" "L'option -l nécessite un chemin en argument." 101
-        exit 101
-      fi
-      # Appeler la fonction pour définir et persister le chemin
-      if ! set_log_path "$1"; then
-        log_message "ERROR" "Échec de la définition du chemin des logs." 103
-        exit 103
-      fi
-      # LOG_DIR et LOG_FILE sont mis à jour par set_log_path
-      ;;
-    -r)
-      # Charger reset.sh uniquement si nécessaire
-      if ! source "$LIB_DIR/reset.sh"; then
-        log_message "ERROR" "Impossible de charger reset.sh pour l'option -r." 102
-        exit 102
-      fi
-      if reset_environment; then
-        exit 0
-      else
-        exit 1
-      fi
-      ;;
-    --ai)
-      USE_AI=true
-      ;;
-    *)
-      log_message "ERROR" "Option inconnue : $1" 100
-      exit 100
-      ;;
-  esac
-  shift
-done
-
-# Chargement des autres modules (après parsing des options)
-for module in parser cleaner; do
+# Chargement des modules requis
+for module in logger parser cleaner reset; do
   if ! source "$LIB_DIR/$module.sh"; then
-    log_message "ERROR" "Impossible de charger $module.sh. Vérifiez que les fichiers sont correctement installés." >&2
+    echo "ERROR: Impossible de charger $module.sh. Vérifiez que les fichiers sont correctement installés." >&2
     exit 102
   fi
 done
@@ -174,17 +62,96 @@ if ! source "$LIB_DIR/ai.sh" 2>/dev/null; then
   }
 fi
 
+# Fonction d'affichage de l'aide
+show_help() {
+  if [[ -f "$DOCS_DIR/help.txt" ]]; then
+    log_message "INFO" "Affichage de l'aide utilisateur depuis docs/help.txt"
+    cat "$DOCS_DIR/help.txt"
+  else
+    log_message "ERROR" "Fichier d'aide introuvable." 102
+    echo "FlowKhfifDrif - Assistant de développement en langage naturel"
+    echo "\nUTILISATION:"
+    echo "  flowkhfifdrif [OPTIONS] \"commande en langage naturel\""
+    echo "\nOPTIONS:"
+    echo "  -h, --help     Affiche cette aide"
+    echo "  --commands     Affiche des exemples de commandes"
+    echo "  -f             Exécute la commande en arrière-plan (fork)"
+    echo "  -t             Exécute la commande dans un thread"
+    echo "  -s             Exécute la commande dans un sous-shell"
+    echo "  -l CHEMIN      Spécifie un répertoire de logs alternatif"
+    echo "  -r             Réinitialise les paramètres"
+    echo "  --ai           Active les fonctionnalités d'IA"
+  fi
+}
+
+# Fonction d'affichage des exemples de commandes
+print_commands_examples() {
+  if [[ -f "$DOCS_DIR/commands.txt" ]]; then
+    log_message "INFO" "Affichage des exemples de commandes depuis docs/commands.txt"
+    cat "$DOCS_DIR/commands.txt"
+  else
+    log_message "ERROR" "Fichier commands.txt introuvable." 102
+    echo -e "\n📘 Commandes disponibles – Exemples pratiques"
+    echo -e "\n📦 Git local :"
+    echo "  └── init MyApp"
+    echo "  └── clone <URL>"
+    echo "  └── add"
+    echo "  └── commit \"message\""
+    echo "  └── add-commit \"message\""
+    echo "  └── push-main \"message\""
+    echo "  └── push-develop"
+    echo "  └── push-develop-test"
+    echo "  └── status"
+    echo "  └── pull-main"
+    echo "  └── branch-feat-x"
+    echo "  └── checkout-feat-x"
+    echo "  └── log"
+    echo -e "\n📘 Commandes disponibles – Exemples pratiques"
+    echo -e "\n📦 Git local :"
+    echo "  └── init MyApp"
+    echo "  └── clone <URL>"
+    echo "  └── add"
+    echo "  └── commit \"message\""
+    echo "  └── add-commit \"message\""
+    echo "  └── push-main \"message\""
+    echo "  └── push-develop"
+    echo "  └── push-develop-test"
+    echo "  └── status"
+    echo "  └── pull-main"
+    echo "  └── branch-feat-x"
+    echo "  └── checkout-feat-x"
+    echo "  └── log"
+    echo -e "\n🔧 Dépendances et Nettoyage :"
+    echo "  └── install-express"
+    echo "  └── clean"
+    echo "  └── install-express"
+    echo "  └── clean"
+    echo -e "\n☁️ GitHub Remote :"
+    echo "  └── remote-MyApp"
+    echo "  └── board-MyApp"
+    echo "  └── issue-MyApp \"Fix bug\""
+    echo "  └── assign-john-MyApp-3"
+    echo "  └── remote-MyApp"
+    echo "  └── board-MyApp"
+    echo "  └── issue-MyApp \"Fix bug\""
+    echo "  └── assign-john-MyApp-3"
+    echo -e "\nℹ️ Utilisation :"
+    echo "  flowkhfifdrif \"votre commande ici\""
+    echo -e "  ex : flowkhfifdrif push-main \"init project\"\n"
+  fi
+}
+
 # Fonctions d'exécution selon les modes
 run_fork() {
   local cmd="$1"
   log_message "INFO" "Exécution en mode fork (arrière-plan)"
   (
-    source "$LIB_DIR/logger.sh" # Recharger pour avoir le bon LOG_FILE
     source "$LIB_DIR/github.sh" 2>/dev/null || true
     source "$LIB_DIR/parser.sh" 2>/dev/null || true
     eval "$cmd"
     log_message "INFO" "Commande fork terminée: $cmd"
   ) &
+  # Ne pas attendre - retourner immédiatement au script principal
   return 0
 }
 
@@ -192,12 +159,12 @@ run_thread() {
   local cmd="$1"
   log_message "INFO" "Exécution en mode thread (arrière-plan + attente)"
   (
-    source "$LIB_DIR/logger.sh" # Recharger pour avoir le bon LOG_FILE
     source "$LIB_DIR/github.sh" 2>/dev/null || true
     source "$LIB_DIR/parser.sh" 2>/dev/null || true
     eval "$cmd"
     log_message "INFO" "Commande thread terminée: $cmd"
   ) &
+  # Attendre que tous les processus en arrière-plan se terminent
   wait $!
   return $?
 }
@@ -206,7 +173,6 @@ run_subshell() {
   local cmd="$1"
   log_message "INFO" "Exécution en mode subshell (synchrone)"
   (
-    source "$LIB_DIR/logger.sh" # Recharger pour avoir le bon LOG_FILE
     source "$LIB_DIR/github.sh" 2>/dev/null || true
     source "$LIB_DIR/parser.sh" 2>/dev/null || true
     eval "$cmd"
@@ -217,6 +183,52 @@ run_subshell() {
   return $?
 }
 
+# Lecture des options
+while [[ $# -gt 0 && "$1" =~ ^- ]]; do
+  case "$1" in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    --commands)
+      print_commands_examples
+      exit 0
+      ;;
+    -f)
+      MODE="fork"
+      ;;
+    -t)
+      MODE="thread"
+      ;;
+    -s)
+      MODE="subshell"
+      ;;
+    -l)
+      shift
+      LOG_DIR="$1"
+      LOG_FILE="$LOG_DIR/history.log"
+      ;;
+    -r)
+      if reset_environment; then
+        
+        exit 0
+      else
+  
+        exit 1
+      fi
+      ;;
+    --ai)
+      USE_AI=true
+      ;;
+    *)
+      log_message "ERROR" "Option inconnue : $1" 100
+      exit 100
+      ;;
+  esac
+  shift
+
+done
+
 # Traitement de la commande
 INPUT="$*"
 if [[ -z "$INPUT" && -z "${RESET:-}" ]]; then
@@ -225,6 +237,7 @@ if [[ -z "$INPUT" && -z "${RESET:-}" ]]; then
   exit 100
 fi
 
+# Mode IA
 # Mode IA
 if [[ "$USE_AI" == true ]]; then
   if ! type process_ai_command &>/dev/null; then
@@ -238,6 +251,7 @@ if [[ "$USE_AI" == true ]]; then
 fi
 
 # Traitement normal
+# Traitement normal
 if [[ -n "$INPUT" ]]; then
   COMMAND=$(parse_natural "$INPUT")
   PARSER_STATUS=$?
@@ -246,6 +260,7 @@ if [[ -n "$INPUT" ]]; then
     exit 100
   fi
   if [[ "$COMMAND" == *"create_github_"* || "$COMMAND" == *"init_remote_repo"* || "$COMMAND" == *"create_board"* || "$COMMAND" == *"assign_github_issue"* ]]; then
+  if [[ "$COMMAND" == *"create_github_"* || "$COMMAND" == *"init_remote_repo"* || "$COMMAND" == *"create_board"* || "$COMMAND" == *"assign_github_issue"* ]]; then
     if ! source "$LIB_DIR/github.sh" 2>/dev/null; then
       log_message "ERROR" "Impossible de charger github.sh pour les commandes GitHub" 104
       echo "Erreur: Les commandes GitHub ne sont pas disponibles. Vérifiez l'installation de github.sh." >&2
@@ -253,28 +268,29 @@ if [[ -n "$INPUT" ]]; then
     fi
   fi
   log_message "DEBUG" "Exécution de la commande: $COMMAND"
-  EXIT_STATUS=0
-  case "$MODE" in
-    fork)
-      log_message "INFO" "Lancement de la commande en mode fork: $COMMAND"
-      run_fork "$COMMAND"
-      ;;
-    thread)
-      log_message "INFO" "Lancement de la commande en mode thread: $COMMAND"
-      run_thread "$COMMAND"
-      EXIT_STATUS=$?
-      ;;
-    subshell)
-      log_message "INFO" "Lancement de la commande en mode subshell: $COMMAND"
-      run_subshell "$COMMAND"
-      EXIT_STATUS=$?
-      ;;
-    *)
-      log_message "INFO" "Exécution en mode normal: $COMMAND"
-      eval "$COMMAND"
-      EXIT_STATUS=$?
-      ;;
-  esac
+  # Remplacer cette partie dans le script principal
+case "$MODE" in
+  fork)
+    log_message "INFO" "Lancement de la commande en mode fork: $COMMAND"
+    run_fork "$COMMAND"
+    ;;
+  thread)
+    log_message "INFO" "Lancement de la commande en mode thread: $COMMAND"
+    run_thread "$COMMAND"
+    EXIT_STATUS=$?
+    ;;
+  subshell)
+    log_message "INFO" "Lancement de la commande en mode subshell: $COMMAND"
+    run_subshell "$COMMAND"
+    EXIT_STATUS=$?
+    ;;
+  *)
+    log_message "INFO" "Exécution en mode normal: $COMMAND"
+    eval "$COMMAND"
+    EXIT_STATUS=$?
+    ;;
+esac
+  EXIT_STATUS=$?
   log_message "DEBUG" "Commande terminée avec le statut: $EXIT_STATUS"
   exit $EXIT_STATUS
 fi
