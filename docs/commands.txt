@@ -2,7 +2,7 @@
 
 📦 GIT LOCAL
 -----------
-init MyApp                        → Initialise un nouveau repo local
+init <nom_repo> true|false <url>                        → Initialise un nouveau repo local
 clone <URL>                       → Clone un repo distant
 
 # Commandes add/commit/push
