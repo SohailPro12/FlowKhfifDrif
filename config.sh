@@ -1,0 +1,4 @@
+export GITHUB_USER="AITOULAHYANFati"
+export GITHUB_TOKEN="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"
+export GIT_USER_EMAIL="fatimaaitoulhyane@gmail.com"
+export GEMINI_API_KEY="AIzaSyAX_zu4hnQvxWmNKhG9I_mhj9gDKo3gADQ"

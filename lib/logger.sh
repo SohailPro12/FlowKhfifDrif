@@ -20,11 +20,15 @@ log_message() {
     local user
     user=$(whoami)
 
+    # Toujours écrire les logs dans le fichier
     if [[ "$level" == "ERROR" && -n "$code" ]]; then
         echo "$timestamp : $user : ERROR  : $message (code $code)" >> "$LOG_FILE"
-        echo "$timestamp : $user : ERROR  : $message (code $code)" >&2
     else
         echo "$timestamp : $user : $level  : $message" >> "$LOG_FILE"
+    fi
+
+    # N'afficher dans le terminal que les messages INFO
+    if [[ "$level" == "INFO" ]]; then
         echo "$timestamp : $user : $level  : $message"
     fi
 }

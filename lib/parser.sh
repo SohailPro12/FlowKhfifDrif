@@ -2,6 +2,7 @@
 # lib/parser.sh — translate natural → commands or function calls
 
 # Importer le logger
+
 # Utilisation du répertoire personnel de l'utilisateur pour les logs
 if [[ -z "$LOG_DIR" ]]; then
   HOME_DIR="${HOME:-/home/$(whoami)}"
