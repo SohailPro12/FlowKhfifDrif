@@ -1,7 +1,9 @@
 reset_environment() {
   # Vérifie les droits root
   if [[ "$EUID" -ne 0 ]]; then
-    log_message "ERROR"  " Vous devez exécuter cette commande en tant que root (utilisez sudo)."
+    log_message "ERROR" "🔒 Vous devez exécuter cette commande en tant que root (utilisez sudo)."
+    log_message "ERROR" "   Raison: La réinitialisation doit pouvoir supprimer et recréer des fichiers système."
+    log_message "ERROR" "   Commande correcte: sudo flowkhfifdrif -r"
     return 1
   fi
 
@@ -42,6 +44,24 @@ reset_environment() {
     rm -rf "$logs_dir" >/dev/null 2>&1
   fi
 
+  # Recréer le répertoire logs avec les bonnes permissions
+  log_message "INFO" " Recréation du répertoire logs avec les bonnes permissions"
+  mkdir -p "$logs_dir"
+  touch "$logs_dir/history.log"
+  
+  # Obtenir l'utilisateur réel (pas root)
+  local real_user="${SUDO_USER:-$(whoami)}"
+  if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+    # Si on est en sudo, donner les permissions à l'utilisateur réel
+    local user_group=$(id -gn "$SUDO_USER" 2>/dev/null || echo "$SUDO_USER")
+    chown -R "$SUDO_USER:$user_group" "$HOME/.flowkhfifdrif"
+    chmod -R 755 "$HOME/.flowkhfifdrif"
+    chmod 644 "$logs_dir/history.log"
+    log_message "INFO" " Permissions ajustées pour l'utilisateur : $SUDO_USER (groupe: $user_group)"
+  else
+    log_message "WARN" " Exécution sans sudo - les permissions peuvent être incorrectes"
+  fi
+
   # Réinitialisation du fichier de config
   log_message "INFO" "Réinitialisation du fichier de config : $config_file"
   cat > "$config_file" <<EOF
@@ -53,6 +73,14 @@ export GIT_USER_NAME=""
 export GIT_USER_EMAIL=""
 # Variables de dépôt supprimées
 EOF
+
+  # Corriger les permissions du fichier de config aussi
+  if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+    local user_group=$(id -gn "$SUDO_USER" 2>/dev/null || echo "$SUDO_USER")
+    chown "$SUDO_USER:$user_group" "$config_file"
+    chmod 644 "$config_file"
+    log_message "INFO" " Permissions du fichier de config ajustées"
+  fi
 
   log_message "INFO" " Environnement réinitialisé avec succès."
   return 0

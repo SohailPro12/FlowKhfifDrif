@@ -11,19 +11,26 @@ UTILISATION:
 OPTIONS:
   -h, --help     Affiche cette aide
   --commands     Affiche des exemples de commandes
-  -f             Exécute la commande en arrière-plan (fork)
-  -t             Exécute la commande dans un thread
-  -s             Exécute la commande dans un sous-shell
+  -f             Parallélise les traitements d'une commande sans attendre la fin
+                 Améliore significativement les performances pour les commandes complexes
+  -t             Parallélise les traitements tout en attendant la complétion finale
+                 Idéal pour combiner performance et fiabilité pour les opérations critiques
+  -s             Exécute la commande dans un sous-shell (environnement isolé)
+                 Pratique pour tester des commandes sans affecter l'environnement principal
   -l CHEMIN      Spécifie un répertoire de logs alternatif
-  -r             Réinitialise les paramètres
+  -r             Réinitialise les paramètres (⚠️ DOIT être exécuté avec sudo)
   --ai           Active les fonctionnalités d'IA avec Gemini (nécessite GEMINI_API_KEY)
 
 EXEMPLES:
-  flowkhfifdrif "init MyApp"
+  flowkhfifdrif "init MyApp true ./chemin/destination"
   flowkhfifdrif "push-main \"Initial commit\""
   flowkhfifdrif "branch-feature"
   flowkhfifdrif "clean"
-  flowkhfifdrif --ai "clone the repository at https://github.com/user/repo"
+  flowkhfifdrif -f "clone https://github.com/user/repo"
+  flowkhfifdrif -t "push-main \"Correction critique\""
+  flowkhfifdrif -s "install-express"
+  flowkhfifdrif "commit-5"         # Affiche les 5 derniers commits
+  flowkhfifdrif "logs"             # Affiche le fichier history.log
 
 CONFIGURATION:
   Pour utiliser les commandes GitHub, définissez ces variables d'environnement:

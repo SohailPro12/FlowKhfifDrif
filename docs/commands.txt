@@ -1,62 +1,9 @@
-<<<<<<< HEAD
 📘 COMMANDES DISPONIBLES – EXEMPLES PRATIQUES
 
 📦 GIT LOCAL
 -----------
-init <nom_repo> true|false <url>                        → Initialise un nouveau repo local
-clone <URL>                       → Clone un repo distant
-
-# Commandes add/commit/push
-add                               → Ajoute tous les fichiers modifiés
-commit "message"                  → Commit avec message
-add-commit "message"              → Ajoute et commit en une commande
-push-main "message"               → Add, commit et push sur main
-push-develop                      → Push sur develop (sans add/commit)
-push-develop-test                 → Push + lancer tests
-
-# Branches
-branch-feat-x                     → Crée une nouvelle branche
-checkout-feat-x                   → Bascule vers une branche
-
-# Informations
-status                            → Affiche l'état du dépôt
-log                               → Affiche le dernier commit
-pull-main                         → Récupère les dernières modifs de main
-pull-develop                      → Récupère les dernières modifs de develop
-
-🔧 DÉPENDANCES ET NETTOYAGE
--------------------------
-install-express                   → Installe express avec npm
-clean                             → Nettoie les logs et fichiers temporaires
-
-☁️ GITHUB REMOTE
--------------
-remote-MyApp                      → Crée un repo GitHub et le relie localement
-board-MyApp                       → Crée un tableau et des issues de base
-issue-MyApp "Fix bug"             → Crée une issue personnalisée
-assign-john-MyApp-3               → Assigne une issue à un utilisateur
-
-ℹ️ COMPATIBILITÉ (ANCIENNES COMMANDES)
-----------------------------------
-push into main with commit "msg"  → Équivalent à push-main "msg"
-create a new branch called feat-x → Équivalent à branch-feat-x
-switch to branch feat-x           → Équivalent à checkout-feat-x
-show status                       → Équivalent à status
-show latest commit                → Équivalent à log
-pull from origin                  → Équivalent à pull-main
-i want the express library        → Équivalent à install-express
-clean logs and tmp files          → Équivalent à clean
-create remote repo MyApp          → Équivalent à remote-MyApp
-setup board and issues MyApp      → Équivalent à board-MyApp
-create issue "Fix bug" MyApp      → Équivalent à issue-MyApp "Fix bug"
-assign user john to issue #3 MyApp → Équivalent à assign-john-MyApp-3
-=======
-📘 COMMANDES DISPONIBLES – EXEMPLES PRATIQUES
-
-📦 GIT LOCAL
------------
-init MyApp                        → Initialise un nouveau repo local
-  Exemple: flowkhfifdrif "init MyProject"
+init <repo> <true|false> <path>   → Initialise un nouveau repo local
+  Exemple: flowkhfifdrif "init MyProject true ./mon-projet"
 
 clone <URL>                       → Clone un repo distant
   Exemple: flowkhfifdrif "clone https://github.com/user/repo"
@@ -95,6 +42,13 @@ status                            → Affiche l'état du dépôt
 log                               → Affiche le dernier commit
   Exemple: flowkhfifdrif "log"
 
+commit-n                          → Affiche les n derniers commits
+  Exemple: flowkhfifdrif "commit-5"
+  Exemple: flowkhfifdrif "commit-10"
+
+logs                              → Affiche le fichier history.log complet
+  Exemple: flowkhfifdrif "logs"
+
 pull-main                         → Récupère les dernières modifs de main
   Exemple: flowkhfifdrif "pull-main"
 
@@ -120,6 +74,64 @@ issue-MyApp <titre>               → Crée une issue personnalisée
 assign-john-MyApp-3               → Assigne une issue à un utilisateur
   Exemple: flowkhfifdrif "assign-john-MyProject-3"
 
+🔄 MODES D'EXÉCUTION AVANCÉS
+-----------------------------------------
+# Mode Fork (-f): Parallélisation des traitements sans attente
+  Usage: Parallélise les traitements internes d'une commande pour une exécution plus rapide
+  Avantage: Réduit considérablement le temps d'exécution pour les commandes complexes
+  Exemple: flowkhfifdrif -f "clone https://github.com/user/repo"
+  Exemple: flowkhfifdrif -f "push-main \"Nouvelle version\""
+  Exemple: flowkhfifdrif -f "install-express"
+
+# Mode Thread (-t): Parallélisation des traitements avec attente
+  Usage: Parallélise les traitements tout en attendant la complétion finale
+  Avantage: Optimise la vitesse d'exécution tout en garantissant la synchronisation
+  Exemple: flowkhfifdrif -t "pull-main"
+  Exemple: flowkhfifdrif -t "push-main \"Version critique\""
+
+# Mode Subshell (-s): Exécution dans un environnement isolé
+  Exemple: flowkhfifdrif -s "install-react"
+  Exemple: flowkhfifdrif -s "status"
+
+🚀 COMMANDES PARALLÉLISABLES
+-----------------------------------------
+# Ces commandes sont optimisées pour les modes -f et -t car elles exécutent
+# des opérations indépendantes qui peuvent vraiment être parallélisées
+
+# Multi-installation de packages (Parfait pour -f/-t)
+install-multi <package1> <package2> ...   → Installe plusieurs packages en parallèle
+  Exemple: flowkhfifdrif -f "install-multi express mongoose dotenv"
+  Exemple: flowkhfifdrif -t "install-multi react vue angular"
+
+# Multi-clonage de repositories (Parfait pour -f/-t)  
+clone-multi <repo1> <repo2> ...           → Clone plusieurs repos en parallèle
+  Exemple: flowkhfifdrif -f "clone-multi https://github.com/user/repo1 https://github.com/user/repo2"
+  Exemple: flowkhfifdrif -t "clone-multi repo1.git repo2.git repo3.git"
+
+# Push avec backup (Innovation - parallélisation créative)
+push-backup-<branch> "message"            → Push + création branche backup en parallèle
+  Exemple: flowkhfifdrif -f "push-backup-main \"Deploy to production\""
+  Exemple: flowkhfifdrif -t "push-backup-develop \"Feature complete\""
+  
+  ✨ Innovation: Crée automatiquement une branche backup-main-20250601-143022
+     pendant que le push principal s'exécute, pour sécurité maximale
+
+🔄 COMMANDE DE RÉINITIALISATION
+-----------------------------------------
+# Reset (-r): Réinitialisation complète de l'environnement FlowKhfifDrif
+  ⚠️ IMPORTANT: Cette commande DOIT être exécutée avec sudo
+  Usage: sudo flowkhfifdrif -r
+  
+  Actions effectuées:
+  • Suppression du dépôt local actuel
+  • Réinitialisation de la configuration Git globale
+  • Nettoyage complet des logs
+  • Recréation des répertoires avec les bonnes permissions
+  • Réinitialisation du fichier de configuration
+  
+  Exemple correct: sudo flowkhfifdrif -r
+  Exemple incorrect: flowkhfifdrif -r  (affichera un avertissement)
+
 ℹ️ UTILISATION
 ----------
 flowkhfifdrif "votre commande ici"
@@ -128,4 +140,3 @@ REMARQUES:
 - Les guillemets autour des messages sont optionnels
 - Pour les messages contenant des caractères spéciaux, utilisez des guillemets
 - Toutes les commandes utilisent la syntaxe avec tirets pour plus de cohérence
->>>>>>> 21f16b221bd53c0ccbbd58611945d758a10b652a

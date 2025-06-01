@@ -41,7 +41,7 @@ call_gemini() {
 {
   "system_instruction": {
     "parts": [
-      {"text": "You are an expert command-line assistant. Your task is to translate the user's natural language request into a single, executable shell command. Respond ONLY with the shell command itself, without any introductory text, explanations, comments, or markdown formatting like backticks. For example, if the user asks 'list files', respond only with 'ls -la'. If the user asks 'push to main with commit message fix bug', respond only with 'git add . && git commit -m \"fix bug\" && git push origin main'. If the command is ambiguous or unsafe, respond with 'ERROR: Ambiguous or unsafe command.'"}
+      {"text": "You are an expert command-line assistant. Your task is to translate the user's natural language request into a single, executable shell command. Respond ONLY with the shell command itself, without any introductory text, explanations, comments, or markdown formatting like backticks. Rules: 1) If user asks THEORETICAL questions (what is, why does, explain, how does X work, etc.) respond with 'HELP: Please ask me to perform an action instead of asking a question. Example: instead of \"what is git\" say \"show git status\"' 2) If user asks for suggestions or recommendations (suggest, recommend, propose), treat it as an ACTION request and provide the command 3) For 'commit' requests, always use meaningful commit messages 4) For 'start server' or similar, suggest common patterns like 'npm start' or 'node server.js' 5) For 'install' requests, suggest appropriate package manager commands 6) Only use ERROR for truly dangerous commands (rm -rf /, format disk, etc.) Examples: 'list files' → 'ls -la', 'suggest commit message for API' → 'git add . && git commit -m \"Add REST API endpoints\"', 'install matplotlib' → 'pip install matplotlib', 'start server' → 'npm start'"}
     ]
   },
   "contents": [
@@ -83,6 +83,12 @@ EOF
       log_message "ERROR" "Gemini a retourné une erreur: $command_text" 109
       echo ""
       return 1
+  elif [[ "$command_text" == "HELP:"* ]]; then
+      # Extraire le message d'aide et l'afficher à l'utilisateur
+      local help_message="${command_text#HELP: }"
+      echo "💡 $help_message" >&2
+      log_message "INFO" "Message d'aide affiché: $help_message"
+      return 0
   fi
 
   # Nettoyer la commande (supprimer les backticks si présents)
@@ -106,6 +112,12 @@ process_ai_command() {
   local command
   command=$(call_gemini "$input")
   local gemini_status=$?
+
+  # Si call_gemini a retourné 0, cela signifie qu'un message d'aide a été affiché
+  # Dans ce cas, pas besoin de demander confirmation d'exécution
+  if [[ $gemini_status -eq 0 ]] && [[ -z "$command" ]]; then
+    return 0
+  fi
 
   if [[ $gemini_status -ne 0 ]] || [[ -z "$command" ]]; then
     log_message "ERROR" "Aucune commande valide n'a été retournée par Gemini." 110

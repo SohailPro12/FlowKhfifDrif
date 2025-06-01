@@ -19,16 +19,13 @@ parse_natural() {
 
   # --- COMMANDES GIT LOCAL ---
 
-  # 1) init <repo> [public|private] [path] - Initialisation d'un dépôt
-  if [[ "$INPUT" =~ ^init[[:space:]]+([A-Za-z0-9._-]+)([[:space:]]+(public|private))?([[:space:]]+([^[:space:]]+))?$ ]]; then
+  # 1) init <repo> <true|false> <path> - Initialisation d'un dépôt
+  if [[ "$INPUT" =~ ^init[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]+((true|false))[[:space:]]+([^[:space:]]+)$ ]]; then
     local repo_name="${BASH_REMATCH[1]}"
-    local visibility="${BASH_REMATCH[3]:-public}" # Default to public
-    local path="${BASH_REMATCH[5]:-.}"
-    local is_private="false"
-    if [[ "$visibility" == "private" ]]; then
-      is_private="true"
-    fi
-    log_message "INFO" "Initialisation du dépôt $repo_name (Visibilité: $visibility)" >&2
+    local is_private="${BASH_REMATCH[2]}"
+    local path="${BASH_REMATCH[4]}"
+    
+    log_message "INFO" "Initialisation du dépôt $repo_name (Privé: $is_private, Chemin: $path)" >&2
     echo "init_remote_repo $repo_name $is_private $path"
     return 0
   fi
@@ -54,7 +51,15 @@ parse_natural() {
     return 0
   fi
 
-  # 4) commit <msg> - Commit avec message (avec ou sans guillemets)
+  # 4a) commit-n - Affichage des n derniers commits (DOIT ÊTRE AVANT commit <msg>)
+  if [[ "$INPUT" =~ ^commit-([0-9]+)$ ]]; then
+    local num_commits="${BASH_REMATCH[1]}"
+    log_message "INFO" "Affichage des $num_commits derniers commits" >&2
+    echo "git log -$num_commits --oneline"
+    return 0
+  fi
+
+  # 4b) commit <msg> - Commit avec message (avec ou sans guillemets)
   if [[ "$INPUT" =~ ^commit[[:space:]]+\"?([^\"]+)\"?$ ]]; then
     local MSG="${BASH_REMATCH[1]}"
     log_message "INFO" "Commit avec message \"$MSG\"" >&2
@@ -76,6 +81,16 @@ parse_natural() {
     local MSG="${BASH_REMATCH[2]}"
     log_message "INFO" "Push vers la branche $BR avec message de commit" >&2
     echo "git add . && git commit -m \"$MSG\" && git push origin $BR"
+    return 0
+  fi
+
+  # 6b) push-backup-<branch> <msg> - Push avec création de branche de sauvegarde (parallélisable)
+  if [[ "$INPUT" =~ ^push-backup-([A-Za-z0-9._-]+)[[:space:]]+\"?([^\"]+)\"?$ ]]; then
+    local BR="${BASH_REMATCH[1]}"
+    local MSG="${BASH_REMATCH[2]}"
+    local BACKUP_BR="backup-$BR-$(date +%Y%m%d-%H%M%S)"
+    log_message "INFO" "Push vers $BR avec création de branche de sauvegarde $BACKUP_BR" >&2
+    echo "git add . && git commit -m \"$MSG\" && git checkout -b $BACKUP_BR && git checkout $BR && git push origin $BACKUP_BR && git push origin $BR"
     return 0
   fi
 
@@ -115,6 +130,13 @@ parse_natural() {
     return 0
   fi
 
+  # 11c) logs - Affichage du fichier history.log
+  if [[ "$INPUT" =~ ^logs$ ]]; then
+    log_message "INFO" "Affichage du fichier history.log" >&2
+    echo "show_history_logs"
+    return 0
+  fi
+
   # 12) pull-<branch> - Pull depuis une branche
   if [[ "$INPUT" =~ ^pull-([A-Za-z0-9._-]+)$ ]]; then
     local BR="${BASH_REMATCH[1]}"
@@ -136,6 +158,24 @@ parse_natural() {
   if [[ "$INPUT" =~ ^install-([A-Za-z0-9._-]+)$ ]]; then
     log_message "INFO" "Installation de la bibliothèque ${BASH_REMATCH[1]}" >&2
     echo "npm install ${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  # 14b) install-multi - Installation de plusieurs bibliothèques (parallélisable)
+  if [[ "$INPUT" =~ ^install-multi[[:space:]]+(.+)$ ]]; then
+    local libs="${BASH_REMATCH[1]}"
+    log_message "INFO" "Installation parallèle de plusieurs bibliothèques: $libs" >&2
+    # Convertir "lib1 lib2 lib3" en "npm install lib1 && npm install lib2 && npm install lib3"
+    echo "$libs" | sed 's/[[:space:]]\+/ \&\& npm install /g' | sed 's/^/npm install /'
+    return 0
+  fi
+
+  # 14c) clone-multi - Clonage de plusieurs repositories (parallélisable)
+  if [[ "$INPUT" =~ ^clone-multi[[:space:]]+(.+)$ ]]; then
+    local repos="${BASH_REMATCH[1]}"
+    log_message "INFO" "Clonage parallèle de plusieurs repositories: $repos" >&2
+    # Convertir "repo1 repo2 repo3" en "git clone repo1 && git clone repo2 && git clone repo3"
+    echo "$repos" | sed 's/[[:space:]]\+/ \&\& git clone /g' | sed 's/^/git clone /'
     return 0
   fi
 
