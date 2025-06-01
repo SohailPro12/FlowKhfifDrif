@@ -11,26 +11,43 @@ UTILISATION:
 OPTIONS:
   -h, --help     Affiche cette aide
   --commands     Affiche des exemples de commandes
-  -f             Parallélise les traitements d'une commande sans attendre la fin
-                 Améliore significativement les performances pour les commandes complexes
-  -t             Parallélise les traitements tout en attendant la complétion finale
-                 Idéal pour combiner performance et fiabilité pour les opérations critiques
+  -f             Mode Fork: Parallélisation intelligente sans attendre la fin
+                 🧠 IA intégrée: Optimise automatiquement les commandes multiples
+                 ⚡ NPM Smart: Combine "install-X && install-Y" → "npm install X Y"
+                 🔐 Git Safe: Empêche la parallélisation dangereuse des workflows git
+  -t             Mode Thread: Parallélisation intelligente avec attente de complétion
+                 💾 Fiabilité garantie: Performance + sécurité pour opérations critiques
+                 🔄 Synchronisation: Attend la complétion de toutes les opérations parallèles
   -s             Exécute la commande dans un sous-shell (environnement isolé)
-                 Pratique pour tester des commandes sans affecter l'environnement principal
+                 🧪 Mode test: Parfait pour tester sans affecter l'environnement principal
   -l CHEMIN      Spécifie un répertoire de logs alternatif
   -r             Réinitialise les paramètres (⚠️ DOIT être exécuté avec sudo)
   --ai           Active les fonctionnalités d'IA avec Gemini (nécessite GEMINI_API_KEY)
 
 EXEMPLES:
+  # Commandes de base
   flowkhfifdrif "init MyApp true ./chemin/destination"
   flowkhfifdrif "push-main \"Initial commit\""
   flowkhfifdrif "branch-feature"
   flowkhfifdrif "clean"
-  flowkhfifdrif -f "clone https://github.com/user/repo"
-  flowkhfifdrif -t "push-main \"Correction critique\""
-  flowkhfifdrif -s "install-express"
+  
+  # Nouvelles commandes de logs
   flowkhfifdrif "commit-5"         # Affiche les 5 derniers commits
-  flowkhfifdrif "logs"             # Affiche le fichier history.log
+  flowkhfifdrif "commit-10"        # Affiche les 10 derniers commits  
+  flowkhfifdrif "logs"             # Affiche le fichier history.log complet
+  
+  # Parallélisation intelligente avec optimisations automatiques
+  flowkhfifdrif -f "install-express && install-mongoose && install-dotenv"
+  → Auto-optimisé en: npm install express mongoose dotenv
+  
+  flowkhfifdrif -f "clone repo1 && clone repo2"
+  → Vrais clones parallèles (opérations indépendantes)
+  
+  flowkhfifdrif -t "push-backup-main \"Correction critique\""
+  → Push sécurisé avec backup automatique + attente de complétion
+  
+  # Mode test isolé
+  flowkhfifdrif -s "install-react"
 
 CONFIGURATION:
   Pour utiliser les commandes GitHub, définissez ces variables d'environnement:

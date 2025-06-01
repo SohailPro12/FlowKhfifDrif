@@ -218,8 +218,17 @@ run_fork() {
   
   # Parser la commande pour identifier les sous-tâches potentielles
   if [[ "$cmd" == *"&&"* ]]; then
-    # Commande avec plusieurs étapes séparées par &&
-    IFS='&&' read -ra sub_tasks <<< "$cmd"
+    # Vérifier si c'est une séquence git qui doit rester séquentielle
+    if [[ "$cmd" == *"git add"* && "$cmd" == *"git commit"* ]] || 
+       [[ "$cmd" == *"git checkout"* && "$cmd" == *"git push"* ]] ||
+       [[ "$cmd" == *"npm install"* && "$cmd" == *"&&"* && "$cmd" != *"install-"*"&&"*"install-"* ]]; then
+      # Ces commandes doivent rester séquentielles - ne pas paralléliser
+      echo "Détection de workflow séquentiel Git/npm - exécution normale sans parallélisation" >&2
+      sub_tasks=("$cmd")
+    else
+      # Commande avec plusieurs étapes séparées par && (vraiment parallélisables)
+      IFS='&&' read -ra sub_tasks <<< "$cmd"
+    fi
   else
     # Commandes spéciales qui peuvent être parallélisées
     case "$cmd" in
@@ -315,8 +324,17 @@ run_thread() {
   
   # Parser la commande pour identifier les sous-tâches potentielles
   if [[ "$cmd" == *"&&"* ]]; then
-    # Commande avec plusieurs étapes séparées par &&
-    IFS='&&' read -ra sub_tasks <<< "$cmd"
+    # Vérifier si c'est une séquence git qui doit rester séquentielle
+    if [[ "$cmd" == *"git add"* && "$cmd" == *"git commit"* ]] || 
+       [[ "$cmd" == *"git checkout"* && "$cmd" == *"git push"* ]] ||
+       [[ "$cmd" == *"npm install"* && "$cmd" == *"&&"* && "$cmd" != *"install-"*"&&"*"install-"* ]]; then
+      # Ces commandes doivent rester séquentielles - ne pas paralléliser
+      echo "Détection de workflow séquentiel Git/npm - exécution normale sans parallélisation" >&2
+      sub_tasks=("$cmd")
+    else
+      # Commande avec plusieurs étapes séparées par && (vraiment parallélisables)
+      IFS='&&' read -ra sub_tasks <<< "$cmd"
+    fi
   else
     # Commandes spéciales qui peuvent être parallélisées
     case "$cmd" in

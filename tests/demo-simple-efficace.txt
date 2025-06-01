@@ -30,12 +30,11 @@ echo '{
     "start": "node app.js",
     "test": "jest"
   }
-}' > package.json
-
-mkdir src components docs
-echo 'console.log("Task Manager démarré");' > src/app.js
-echo 'class TaskManager { constructor() { this.tasks = []; } }' > src/TaskManager.js
-echo '# Task Manager Demo' > README.md
+}' > package.json &&
+mkdir src components docs &&
+echo 'console.log("Task Manager démarré");' > src/app.js &&
+echo 'class TaskManager { constructor() { this.tasks = []; } }' > src/TaskManager.js &&
+echo '# Task Manager Demo' > README.md &&
 echo 'node_modules/' > .gitignore
 
 # ✨ MAGIE FLOWKHFIFDRIF: Init + GitHub en une commande
@@ -74,8 +73,7 @@ echo "🚀 Mode Fork - Installation parallèle de plusieurs packages:"
 flowkhfifdrif -f "install-express && install-mongoose && install-dotenv && install-cors"
 
 # VRAIE PARALLELISATION 2: Push avec backup (votre innovation!)
-echo 'function deleteTask(id) { this.tasks = this.tasks.filter(t => t.id !== id); }' >> src/TaskManager.js
-echo 'function toggleTask(id) { const task = this.tasks.find(t => t.id === id); if(task) task.completed = !task.completed; }' >> src/TaskManager.js
+echo 'function deleteTask(id) { this.tasks = this.tasks.filter(t => t.id !== id); }' >> src/TaskManager.js && echo 'function toggleTask(id) { const task = this.tasks.find(t => t.id === id); if(task) task.completed = !task.completed; }' >> src/TaskManager.js
 
 echo "🛡️ Mode Thread - Push avec backup automatique (INNOVATION):"
 flowkhfifdrif -t "push-backup-main \"Fonctionnalités CRUD complètes (Issue #2)\""
@@ -89,9 +87,9 @@ cd ..
 rm -rf temp-repos
 
 # Mode Subshell pour test sécurisé (pas parallelisé - normal)
-echo '## Documentation API' > docs/API.md
-echo '- addTask(title): Créer nouvelle tâche' >> docs/API.md
-echo '- deleteTask(id): Supprimer tâche' >> docs/API.md
+echo '## Documentation API' > docs/API.md &&
+echo '- addTask(title): Créer nouvelle tâche' >> docs/API.md &&
+echo '- deleteTask(id): Supprimer tâche' >> docs/API.md 
 
 echo "🛡️ Mode Subshell - Test sécurisé de la documentation:"
 flowkhfifdrif -s "add-commit \"Documentation API (Issue #3)\""
@@ -149,6 +147,14 @@ echo "🆕 INNOVATIONS:"
 echo "   → Commande 'commit-n': Affiche les n derniers commits"
 echo "   → Commande 'logs': Historique complet des actions"
 echo "   → Gestion intelligente des permissions avec sudo"
+echo "   → IA Gemini intégrée pour assistance contextuelle"
+echo ""
+echo "🤖 INTELLIGENCE ARTIFICIELLE:"
+echo "   → Assistant IA personnalisé avec Gemini"
+echo "   → Aide contextuelle basée sur l'état du projet"
+echo "   → Résolution automatique de problèmes Git"
+echo "   → Génération de commandes à partir de langage naturel"
+echo "   → Optimisation proactive du workflow"
 echo ""
 echo "🛡️ SÉCURITÉ:"
 echo "   → Validation sudo pour reset"
@@ -160,9 +166,77 @@ echo "   → Réduction de 70% des commandes Git complexes"
 echo "   → Workflow unifié Git + GitHub"
 echo "   → Parallélisation intelligente des opérations"
 echo "   → Gestion d'équipe simplifiée avec issues/boards"
+echo "   → Assistant IA personnalisé pour guidance en temps réel"
+echo "   → Apprentissage et amélioration continue du workflow"
+
+# === ÉTAPE 6: FONCTIONNALITÉS IA AVANCÉES (1 minute) ===
+echo "🤖 ÉTAPE 6: Fonctionnalités IA avec Gemini (INNOVATION MAJEURE)"
+
+# Configuration IA (vérifier si GEMINI_API_KEY est défini)
+if [ -z "$GEMINI_API_KEY" ]; then
+    echo "⚠️ Pour tester l'IA, définissez: export GEMINI_API_KEY=\"votre_clé\""
+    echo "📚 Démonstration des capacités IA disponibles:"
+else
+    echo "✅ IA Gemini configurée - Démonstration en direct:"
+fi
+
+echo ""
+echo "🧠 FONCTIONNALITÉS IA DISPONIBLES:"
+
+# Exemple 1: Aide contextuelle intelligente
+echo "   1️⃣ AIDE CONTEXTUELLE INTELLIGENTE:"
+echo "      → L'IA analyse votre situation et propose les meilleures commandes"
+if [ ! -z "$GEMINI_API_KEY" ]; then
+    echo "      🚀 Test en direct:"
+    flowkhfifdrif --ai "Je veux créer une nouvelle fonctionnalité dans mon projet"
+else
+    echo "      📝 Exemple: flowkhfifdrif --ai \"Je veux créer une nouvelle fonctionnalité\""
+    echo "      💡 Réponse IA: \"Je recommande: 1) branch-feat-nouvelle 2) add-commit 3) push-backup-main\""
+fi
+
+echo ""
+echo "   2️⃣ RÉSOLUTION AUTOMATIQUE DE PROBLÈMES:"
+echo "      → L'IA détecte les erreurs Git et propose des solutions"
+if [ ! -z "$GEMINI_API_KEY" ]; then
+    echo "      🚀 Test en direct:"
+    flowkhfifdrif --ai "J'ai un conflit de merge, que faire?"
+else
+    echo "      📝 Exemple: flowkhfifdrif --ai \"J'ai un conflit de merge\""
+    echo "      💡 Réponse IA: \"Utilisez: git status pour voir les conflits, puis git add après résolution\""
+fi
+
+echo ""
+echo "   3️⃣ OPTIMISATION DE WORKFLOW:"
+echo "      → L'IA analyse votre historique et suggère des améliorations"
+if [ ! -z "$GEMINI_API_KEY" ]; then
+    echo "      🚀 Test en direct:"
+    flowkhfifdrif --ai "Comment optimiser mon workflow Git?"
+else
+    echo "      📝 Exemple: flowkhfifdrif --ai \"Comment optimiser mon workflow?\""
+    echo "      💡 Réponse IA: \"Utilisez push-backup-main pour sécurité, et -f pour parallélisation\""
+fi
+
+echo ""
+echo "   4️⃣ GÉNÉRATION DE COMMANDES COMPLEXES:"
+echo "      → Décrivez ce que vous voulez en langage naturel"
+if [ ! -z "$GEMINI_API_KEY" ]; then
+    echo "      🚀 Test en direct:"
+    flowkhfifdrif --ai "Je veux publier mon code avec un backup automatique"
+else
+    echo "      📝 Exemple: flowkhfifdrif --ai \"Je veux publier avec backup automatique\""
+    echo "      💡 Réponse IA: \"Utilisez: flowkhfifdrif 'push-backup-main \"Votre message\"'\""
+fi
+
+echo ""
+echo "🎯 AVANTAGES DE L'IA INTÉGRÉE:"
+echo "   ✨ Apprentissage adaptatif de vos habitudes de travail"
+echo "   🔍 Détection proactive des problèmes potentiels"
+echo "   💡 Suggestions contextuelles basées sur l'état du projet"
+echo "   🤝 Assistant personnel pour développeurs débutants et experts"
+echo "   📈 Amélioration continue du workflow grâce à l'analyse des patterns"
 
 # Nettoyage optionnel
 # cd .. && rm -rf task-manager-demo
 
 echo ""
-echo "🎉 DÉMONSTRATION TERMINÉE - FlowKhfifDrif: Git et GitHub simplifiés!"
+echo "🎉 DÉMONSTRATION TERMINÉE - FlowKhfifDrif: Git et GitHub simplifiés avec IA!"

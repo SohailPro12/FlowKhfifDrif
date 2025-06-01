@@ -17,6 +17,114 @@ fi
 parse_natural() {
   local INPUT="$*"
 
+  # --- GESTION PARALLÉLISATION AVEC && ---
+  # Détecter si la commande contient && pour parallélisation
+  if [[ "$INPUT" == *"&&"* ]]; then
+    log_message "INFO" "Commande parallélisable détectée avec &&" >&2
+    
+    # Cas spécial: multiples install-<package>
+    # Exemple: install-express && install-mongoose && install-dotenv
+    if [[ "$INPUT" =~ ^install-[A-Za-z0-9._-]+([[:space:]]*\&\&[[:space:]]*install-[A-Za-z0-9._-]+)+$ ]]; then
+      log_message "INFO" "Détection de multiples installations - optimisation en une seule commande" >&2
+      
+      # Extraire tous les noms de packages
+      local packages=""
+      local temp_input="$INPUT"
+      
+      # Remplacer && par des espaces et extraire les packages
+      temp_input="${temp_input//&&/ }"
+      
+      for word in $temp_input; do
+        if [[ "$word" =~ ^install-([A-Za-z0-9._-]+)$ ]]; then
+          local package_name="${BASH_REMATCH[1]}"
+          if [[ -n "$packages" ]]; then
+            packages="$packages $package_name"
+          else
+            packages="$package_name"
+          fi
+        fi
+      done
+      
+      if [[ -n "$packages" ]]; then
+        echo "npm install $packages"
+        return 0
+      fi
+    fi
+    
+    # Cas spécial: multiples clone
+    # Exemple: clone url1 && clone url2
+    if [[ "$INPUT" =~ clone.*\&\&.*clone ]]; then
+      log_message "INFO" "Détection de multiples clones - parallélisation vraie" >&2
+      
+      # Pour les clones, la vraie parallélisation est bénéfique
+      # Parser normalement pour permettre l'exécution parallèle
+    fi
+    
+    # Traitement général pour autres commandes parallélisables
+    local parallel_commands=""
+    
+    # Utiliser une approche plus simple et robuste
+    # Séparer les commandes par && en préservant les espaces
+    local IFS_OLD="$IFS"
+    IFS='&'
+    read -ra PARTS <<< "$INPUT"
+    IFS="$IFS_OLD"
+    
+    local commands=()
+    local i=0
+    while [[ $i -lt ${#PARTS[@]} ]]; do
+      if [[ $i -eq 0 ]]; then
+        # Première partie
+        commands+=("${PARTS[$i]}")
+      elif [[ "${PARTS[$i]}" == "" && "${PARTS[$((i+1))]}" != "" ]]; then
+        # Trouvé &&, prendre la partie suivante
+        i=$((i+1))
+        commands+=("${PARTS[$i]}")
+      fi
+      i=$((i+1))
+    done
+    
+    # Si ça ne marche pas, essayer une approche différente
+    if [[ ${#commands[@]} -le 1 ]]; then
+      # Méthode alternative: remplacer && par un marqueur temporaire
+      local temp_input="$INPUT"
+      temp_input="${temp_input// && /|||}"
+      temp_input="${temp_input//&&/|||}"
+      
+      IFS='|||' read -ra commands <<< "$temp_input"
+    fi
+    
+    # Parser chaque commande
+    for cmd in "${commands[@]}"; do
+      # Nettoyer les espaces
+      cmd=$(echo "$cmd" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      
+      if [[ -n "$cmd" && "$cmd" != "" ]]; then
+        # Parser chaque commande individuellement
+        local parsed_cmd=$(parse_single_command "$cmd")
+        if [[ -n "$parsed_cmd" && "$parsed_cmd" != "" ]]; then
+          if [[ -n "$parallel_commands" ]]; then
+            parallel_commands="$parallel_commands && $parsed_cmd"
+          else
+            parallel_commands="$parsed_cmd"
+          fi
+        fi
+      fi
+    done
+    
+    if [[ -n "$parallel_commands" ]]; then
+      echo "$parallel_commands"
+      return 0
+    fi
+  fi
+
+  # Sinon, parser normalement
+  parse_single_command "$INPUT"
+}
+
+parse_single_command() {
+  local INPUT="$1"
+
   # --- COMMANDES GIT LOCAL ---
 
   # 1) init <repo> <true|false> <path> - Initialisation d'un dépôt
@@ -75,15 +183,6 @@ parse_natural() {
     return 0
   fi
 
-  # 6) push-<branch> <msg> - Push avec add, commit et message (avec ou sans guillemets)
-  if [[ "$INPUT" =~ ^push-([A-Za-z0-9._-]+)[[:space:]]+\"?([^\"]+)\"?$ ]]; then
-    local BR="${BASH_REMATCH[1]}"
-    local MSG="${BASH_REMATCH[2]}"
-    log_message "INFO" "Push vers la branche $BR avec message de commit" >&2
-    echo "git add . && git commit -m \"$MSG\" && git push origin $BR"
-    return 0
-  fi
-
   # 6b) push-backup-<branch> <msg> - Push avec création de branche de sauvegarde (parallélisable)
   if [[ "$INPUT" =~ ^push-backup-([A-Za-z0-9._-]+)[[:space:]]+\"?([^\"]+)\"?$ ]]; then
     local BR="${BASH_REMATCH[1]}"
@@ -91,6 +190,15 @@ parse_natural() {
     local BACKUP_BR="backup-$BR-$(date +%Y%m%d-%H%M%S)"
     log_message "INFO" "Push vers $BR avec création de branche de sauvegarde $BACKUP_BR" >&2
     echo "git add . && git commit -m \"$MSG\" && git checkout -b $BACKUP_BR && git checkout $BR && git push origin $BACKUP_BR && git push origin $BR"
+    return 0
+  fi
+
+  # 6) push-<branch> <msg> - Push avec add, commit et message (avec ou sans guillemets)
+  if [[ "$INPUT" =~ ^push-([A-Za-z0-9._-]+)[[:space:]]+\"?([^\"]+)\"?$ ]]; then
+    local BR="${BASH_REMATCH[1]}"
+    local MSG="${BASH_REMATCH[2]}"
+    log_message "INFO" "Push vers la branche $BR avec message de commit" >&2
+    echo "git add . && git commit -m \"$MSG\" && git push origin $BR"
     return 0
   fi
 
@@ -210,13 +318,31 @@ parse_natural() {
   fi
 
   # 19) assign-<user>-<repo>-<num> - Attribution d'une issue
-  if [[ "$INPUT" =~ ^assign-([A-Za-z0-9._-]+)-([A-Za-z0-9._-]+)-([0-9]+)$ ]]; then
-    log_message "INFO" "Attribution de l'utilisateur ${BASH_REMATCH[1]} à l'issue #${BASH_REMATCH[3]} dans ${BASH_REMATCH[2]}" >&2
-    echo "assign_github_issue ${BASH_REMATCH[3]} ${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
-    return 0
+  # Pattern robuste pour gérer les repos avec tirets multiples
+  if [[ "$INPUT" =~ ^assign-(.+)-([0-9]+)$ ]]; then
+    local user_and_repo="${BASH_REMATCH[1]}"
+    local issue_num="${BASH_REMATCH[2]}"
+    
+    # Séparer user et repo : chercher le premier tiret après "assign-"
+    if [[ "$user_and_repo" =~ ^([^-]+)-(.+)$ ]]; then
+      local user="${BASH_REMATCH[1]}"
+      local repo_name="${BASH_REMATCH[2]}"
+      
+      log_message "INFO" "Attribution de l'utilisateur $user à l'issue #$issue_num dans $repo_name" >&2
+      echo "assign_github_issue $issue_num $user $repo_name"
+      return 0
+    else
+      log_message "ERROR" "Format d'assignation invalide. Utilisez: assign-<user>-<repo>-<num>" 100 >&2
+      return 1
+    fi
   fi
 
   # Commande non reconnue
   log_message "ERROR" "Commande non reconnue: $INPUT" 100 >&2
   return 1
+}
+
+# Fonction principale appelée par le script
+parse_command() {
+  parse_natural "$@"
 }

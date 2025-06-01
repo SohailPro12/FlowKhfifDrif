@@ -227,6 +227,8 @@ EOF
     return 1
   fi
 
+  # Afficher le message de confirmation avec l'URL
+  echo "Tableau créé: $project_url"
   log_message "INFO" "Project V2 créé: $project_url"
 
   create_field_mutation=$(cat <<EOF
@@ -265,6 +267,7 @@ EOF
   fi
 
   log_message "INFO" "Champ 'État' ajouté au projet."
+  echo "✅ Tableau de bord '$repo_name' créé avec succès: $project_url"
   return 0
 }
 

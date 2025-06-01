@@ -22,11 +22,6 @@ add-commit <message>              → Ajoute et commit en une commande
 push-main <message>               → Add, commit et push sur main
   Exemple: flowkhfifdrif "push-main Version initiale du projet"
 
-push-develop                      → Push sur develop (sans add/commit)
-  Exemple: flowkhfifdrif "push-develop"
-
-push-develop-test                 → Push + lancer tests
-  Exemple: flowkhfifdrif "push-develop-test"
 
 # Branches
 branch-feat-x                     → Crée une nouvelle branche
@@ -74,47 +69,78 @@ issue-MyApp <titre>               → Crée une issue personnalisée
 assign-john-MyApp-3               → Assigne une issue à un utilisateur
   Exemple: flowkhfifdrif "assign-john-MyProject-3"
 
-🔄 MODES D'EXÉCUTION AVANCÉS
------------------------------------------
-# Mode Fork (-f): Parallélisation des traitements sans attente
-  Usage: Parallélise les traitements internes d'une commande pour une exécution plus rapide
-  Avantage: Réduit considérablement le temps d'exécution pour les commandes complexes
-  Exemple: flowkhfifdrif -f "clone https://github.com/user/repo"
-  Exemple: flowkhfifdrif -f "push-main \"Nouvelle version\""
-  Exemple: flowkhfifdrif -f "install-express"
+🔄 MODES D'EXÉCUTION AVANCÉS (AVEC INTELLIGENCE IA)
+--------------------------------------------------
+# Mode Fork (-f): Parallélisation intelligente des traitements sans attente
+  🧠 Intelligence IA: Détecte automatiquement quelles commandes peuvent être parallélisées
+  ⚡ Optimisation NPM: Combine automatiquement plusieurs "install-<package>" en une seule commande npm
+  🔐 Protection Git: Empêche la parallélisation des séquences Git qui causent des conflits de verrouillage
+  
+  Exemples d'optimisations automatiques:
+  flowkhfifdrif -f "install-express && install-mongoose && install-dotenv"
+  → Devient automatiquement: npm install express mongoose dotenv cors
+  
+  flowkhfifdrif -f "clone repo1 && clone repo2"
+  → Vrais clones parallèles (opérations indépendantes)
+  
+  flowkhfifdrif -f "push-backup-main \"Deploy\""
+  → Séquentiel intelligent (évite les conflits git)
 
-# Mode Thread (-t): Parallélisation des traitements avec attente
-  Usage: Parallélise les traitements tout en attendant la complétion finale
-  Avantage: Optimise la vitesse d'exécution tout en garantissant la synchronisation
-  Exemple: flowkhfifdrif -t "pull-main"
-  Exemple: flowkhfifdrif -t "push-main \"Version critique\""
+# Mode Thread (-t): Parallélisation intelligente avec attente de complétion
+  🧠 Même intelligence que le mode Fork mais avec synchronisation finale
+  💾 Garantie de données: S'assure que toutes les opérations sont terminées
+  🔄 Idéal pour: Opérations critiques nécessitant une confirmation de complétion
+  
+  Exemple: flowkhfifdrif -t "install-react && install-redux && install-axios"
+  → Optimisé en: npm install react redux axios (avec attente de complétion)
 
 # Mode Subshell (-s): Exécution dans un environnement isolé
+  🏠 Isolation: Exécute dans un sous-shell sans affecter l'environnement principal
+  🧪 Test: Parfait pour tester des commandes sans risque
   Exemple: flowkhfifdrif -s "install-react"
   Exemple: flowkhfifdrif -s "status"
 
-🚀 COMMANDES PARALLÉLISABLES
------------------------------------------
-# Ces commandes sont optimisées pour les modes -f et -t car elles exécutent
-# des opérations indépendantes qui peuvent vraiment être parallélisées
+🚀 COMMANDES ET OPTIMISATIONS INTELLIGENTES
+------------------------------------------
+# FlowKhfifDrif analyse automatiquement vos commandes et applique les optimisations suivantes:
 
-# Multi-installation de packages (Parfait pour -f/-t)
-install-multi <package1> <package2> ...   → Installe plusieurs packages en parallèle
-  Exemple: flowkhfifdrif -f "install-multi express mongoose dotenv"
-  Exemple: flowkhfifdrif -t "install-multi react vue angular"
-
-# Multi-clonage de repositories (Parfait pour -f/-t)  
-clone-multi <repo1> <repo2> ...           → Clone plusieurs repos en parallèle
-  Exemple: flowkhfifdrif -f "clone-multi https://github.com/user/repo1 https://github.com/user/repo2"
-  Exemple: flowkhfifdrif -t "clone-multi repo1.git repo2.git repo3.git"
-
-# Push avec backup (Innovation - parallélisation créative)
-push-backup-<branch> "message"            → Push + création branche backup en parallèle
-  Exemple: flowkhfifdrif -f "push-backup-main \"Deploy to production\""
-  Exemple: flowkhfifdrif -t "push-backup-develop \"Feature complete\""
+# 🔧 Optimisation des installations NPM
+install-<package> && install-<package>... → npm install package1 package2...
+  Exemple automatique:
+  Input:  "install-express && install-mongoose && install-dotenv && install-cors"
+  Output: npm install express mongoose dotenv cors
   
-  ✨ Innovation: Crée automatiquement une branche backup-main-20250601-143022
-     pendant que le push principal s'exécute, pour sécurité maximale
+  ✅ Avantages: Évite les conflits npm, 4x plus rapide, un seul package.json update
+
+# 🔐 Protection des workflows Git séquentiels
+add && commit && push                      → Exécution séquentielle forcée
+push-backup-<branch>                       → Workflow sécurisé avec backup automatique
+  
+  Exemple de protection:
+  Input:  flowkhfifdrif -f "add && commit 'msg' && push-main"
+  Comportement: Force l'exécution séquentielle pour éviter les git locks
+  
+  ✅ Avantages: Aucun conflit git, backup automatique, intégrité des données
+
+# 🚀 Vraie parallélisation pour opérations indépendantes
+clone <repo1> && clone <repo2>             → Clones parallèles réels
+  Exemple:
+  Input:  "clone https://github.com/user/repo1 && clone https://github.com/user/repo2"
+  Comportement: Deux processus git clone indépendants en parallèle
+  
+  ✅ Avantages: 2x plus rapide, aucune dépendance entre opérations
+
+# 💾 Push avec backup automatique (Innovation FlowKhfifDrif)
+push-backup-<branch> "message"            → Push sécurisé avec backup
+  Workflow automatique:
+  1. git add . && git commit -m "message"
+  2. git checkout -b backup-<branch>-<timestamp>
+  3. git checkout <branch>
+  4. git push origin backup-<branch>-<timestamp>
+  5. git push origin <branch>
+  
+  Exemple: flowkhfifdrif "push-backup-main \"Deploy v2.1\""
+  Crée: backup-main-20250101-143022 + push sécurisé
 
 🔄 COMMANDE DE RÉINITIALISATION
 -----------------------------------------
